@@ -1,0 +1,24 @@
+# Build directories
+build/
+out/
+cmake-build-*/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+compile_commands.json
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+.cache/
+.clangd
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Test data (generated)
+test/*_generated.json
