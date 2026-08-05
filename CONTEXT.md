@@ -4,13 +4,17 @@
 
 ## Language
 
-**ItemInstance**:
-一个物品的运行时实例，持有一组动态组件，通过 uuid 唯一标识，由 ItemManager 唯一拥有。
-_Avoid_: ItemEntity、Item
+**EntityInstance**:
+一个实体的运行时实例，持有一组动态组件，通过 uuid 唯一标识，由 EntityManager 唯一拥有。适用于物品、生物等所有实体。
+_Avoid_: ItemEntity、Item、Entity（单指实例时）
 
-**ItemArcheType**:
-物品的类型模板（静态定义），持有静态组件和 dynamic 初始值映射。实例通过 type*id 引用其模板。
+**EntityArcheType**:
+实体的类型模板（静态定义），持有静态组件和 defaults 初始值。实例通过 type*id 引用其模板。
 \_Avoid*: ItemTemplate、ItemDef
+
+**EntityManager**:
+实例池的唯一所有者，管理类型模板、实例池、代表物注册表与逻辑分发。
+_Avoid_: ItemFactory、ItemRegistry
 
 **StaticComponent**:
 只在类型模板上存在、所有该类型实例共享的不可变组件（值、标签、向量）。
@@ -27,12 +31,12 @@ _Avoid_: InventorySlot、BagSlot
 **Inventory**:
 游戏层容器，持有一组 ItemSlot，负责物品的存取与堆叠逻辑。
 
-**ItemManager**:
-实例池的唯一所有者，管理类型模板、实例池、代表物注册表与逻辑分发。
-_Avoid_: ItemFactory、ItemRegistry
+**ItemSemantic**:
+游戏层物品分类（消耗/堆叠语义：UNC/SNC/SUC/MUC），定义于 `Inventory.h`。不属于引擎层。
+_Avoid_: Semantic（当指物品分类时）
 
 **代表物 (Representative)**:
-一个 type*id 的共享实例，所有该类型的非唯一物品共享它，uuid 稳定可持久化。判断方法：实例的组件容器为空。
+一个 type*id 的共享实例，所有该类型的非唯一物品共享它，uuid 稳定可持久化。判断方法：实例的组件容器为空。生物等有运行时组件的类型不会命中该优化。
 \_Avoid*: Prototype、Default instance
 
 **Handler**:
@@ -48,7 +52,7 @@ _Avoid_: Event（指事件对象时）、Handler
 \_Avoid*: id、index、key
 
 **type_id**:
-类型模板的 int32 标识，ItemManager 用它索引 ItemArcheType 与代表物。
+类型模板的 int32 标识，EntityManager 用它索引 EntityArcheType 与代表物。
 _Avoid_: type、item_type
 
 **semantic 键**:

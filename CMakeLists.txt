@@ -21,19 +21,15 @@ endif()
 
 # ===== 核心库（头文件为主，少量 .cpp） =====
 set(CORE_SOURCES
-    core/Item/ItemManager.cpp
-    core/Item/Inventory.cpp
+    core/Entity/EntityManager.cpp
+    # core/Entity/Inventory.cpp  # TODO: 待适配新组件体系后重新加入（依赖旧 API getArcheType/setCharges/m_val_0 等）
 )
 
 set(CORE_HEADERS
     core/Dice/Dice.h
     core/Dice/Dice20.h
-    core/Entity/Entity.h
-    core/Entity/Player.h
-    core/Entity/GM.h
-    core/Entity/Monster.h
     core/Event/Event.h
-    core/Event/Check.h
+    # core/Event/Check.h  # TODO: 依赖已删除的旧 Entity 类（getStatue/Statue::GM），待重构
     core/Event/CreatPlayer.h
     core/Event/Gameinit.h
     core/Event/LoadScene.h
@@ -42,9 +38,16 @@ set(CORE_HEADERS
     core/Event/Time.h
     core/helper/RandomEng.h
     core/helper/UuidGen.h
-    core/Item/ItemManager.h
-    core/Item/ItemSlot.h
-    core/Item/ItemType.h
+    core/Entity/EntityManager.h
+    core/Entity/EntityType.h
+    core/Entity/ItemSlot.h
+    core/math/Math.h
+    core/math/Matrix3x3.h
+    core/math/Matrix4x4.h
+    core/math/Quaternion.h
+    core/math/TransformTools.h
+    core/math/Vector2.h
+    core/math/Vector3.h
 )
 
 add_library(trpg_core STATIC ${CORE_SOURCES} ${CORE_HEADERS})
@@ -84,6 +87,16 @@ target_include_directories(test_item_slot_integration PRIVATE
 )
 target_link_libraries(test_item_slot_integration PRIVATE Boost::json)
 
+add_executable(test_math
+    test/test_math.cpp
+)
+
+target_include_directories(test_math PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${Boost_INCLUDE_DIRS}
+)
+target_link_libraries(test_math PRIVATE Boost::json)
+
 # 把测试 JSON 复制到构建目录
 configure_file(
     ${CMAKE_SOURCE_DIR}/test/test_items.json
@@ -94,3 +107,4 @@ configure_file(
 add_test(NAME ItemManagerTest COMMAND test_item_manager)
 add_test(NAME ItemTypeTest COMMAND test_item_type)
 add_test(NAME ItemSlotIntegrationTest COMMAND test_item_slot_integration)
+add_test(NAME MathTest COMMAND test_math)

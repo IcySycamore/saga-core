@@ -1,14 +1,26 @@
 {
-  "items": [
+  "archetypes": [
     {
       "type_id": 4001,
       "name": "阿司匹林",
-      "max_stack_size": 3,
-      "max_charges": 1,
-      "price": 50,
-      "val_0": 1,
-      "val_1": -1,
-      "val_2": -1
+      "components": {
+        "121": 3
+      },
+      "defaults": {
+        "30": 3
+      }
+    },
+    {
+      "type_id": 4002,
+      "name": "生命药水",
+      "components": {
+        "121": 3,
+        "122": 30
+      },
+      "defaults": {
+        "30": 3,
+        "40": 30
+      }
     }
   ]
 }

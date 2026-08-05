@@ -2,21 +2,21 @@
 // 编译与运行:
 //   cd build && cmake .. -G Ninja && ninja && ctest -V
 //
-// 测试内容: ItemType.h, Component/Static/*, Component/Dynamic/*
+// 测试内容: EntityType.h, Component/Static/*, Component/Dynamic/*
 
-#include "core/Item/Component/Dynamic/CounterArrComponent.h"
-#include "core/Item/Component/Dynamic/CounterComponent.h"
-#include "core/Item/Component/Dynamic/CounterVecComponent.h"
-#include "core/Item/Component/Static/StrLabelComponent.h"
-#include "core/Item/Component/Static/ValLabelComponent.h"
-#include "core/Item/ItemType.h"
+#include "core/Entity/Component/Dynamic/CounterArrComponent.h"
+#include "core/Entity/Component/Dynamic/CounterComponent.h"
+#include "core/Entity/Component/Dynamic/CounterVecComponent.h"
+#include "core/Entity/Component/Static/StrLabelComponent.h"
+#include "core/Entity/Component/Static/ValLabelComponent.h"
+#include "core/Entity/EntityType.h"
+#include "core/Entity/Inventory.h"
 #include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
-
 
 // ===================== 轻量断言宏 =====================
 static int g_passed = 0;
@@ -26,7 +26,7 @@ static int g_failed = 0;
 #define EXPECT(cond, msg)                                                      \
   do {                                                                         \
     if (!(cond)) {                                                             \
-      std::cerr << " FAILED: " << msg << std::endl;                           \
+      std::cerr << " FAILED: " << msg << std::endl;                            \
       ++g_failed;                                                              \
     } else {                                                                   \
       ++g_passed;                                                              \
@@ -46,21 +46,21 @@ static int g_failed = 0;
   } while (false)
 
 // ============================================================
-// ItemArcheType 测试
+// EntityArcheType 测试
 // ============================================================
 static void test_archetype_default() {
-  TEST("ItemArcheType_default_values");
+  TEST("EntityArcheType_default_values");
 
-  ItemArcheType arch{};
+  EntityArcheType arch{};
   EXPECT_EQ(arch.m_type_id, 0);
   EXPECT(arch.m_name.empty(), "default name should be empty");
   EXPECT(arch.m_component.empty(), "default component map should be empty");
 }
 
 static void test_archetype_add_static_component() {
-  TEST("ItemArcheType_add_static_component");
+  TEST("EntityArcheType_add_static_component");
 
-  ItemArcheType arch{};
+  EntityArcheType arch{};
   arch.m_type_id = 1001;
   arch.m_name = "测试物品";
 
@@ -82,9 +82,9 @@ static void test_archetype_add_static_component() {
 }
 
 static void test_archetype_add_val_label_component() {
-  TEST("ItemArcheType_add_val_label_component");
+  TEST("EntityArcheType_add_val_label_component");
 
-  ItemArcheType arch{};
+  EntityArcheType arch{};
   auto val = std::make_unique<ValLabelComponent>();
   val->m_val_label = 100;
   arch.m_component[21] = std::move(val); // DefaultCharges = 21
@@ -98,22 +98,22 @@ static void test_archetype_add_val_label_component() {
 }
 
 // ============================================================
-// ItemInstance 基础测试
+// EntityInstance 基础测试
 // ============================================================
 static void test_instance_default_construction() {
-  TEST("ItemInstance_default_construction");
+  TEST("EntityInstance_default_construction");
 
-  ItemInstance inst;
+  EntityInstance inst;
   EXPECT(!inst.getUuid().is_nil(), "UUID should not be nil");
   EXPECT_EQ(inst.getTypeID(), 0);
   EXPECT_EQ(inst.getRefC(), 0);
 }
 
 static void test_instance_uuid_unique() {
-  TEST("ItemInstance_uuid_unique");
+  TEST("EntityInstance_uuid_unique");
 
-  ItemInstance inst1;
-  ItemInstance inst2;
+  EntityInstance inst1;
+  EntityInstance inst2;
   EXPECT(!(inst1.getUuid() == inst2.getUuid()),
          "two instances should have different UUIDs");
   EXPECT(!inst1.getUuid().is_nil(), "inst1 UUID should not be nil");
@@ -121,9 +121,9 @@ static void test_instance_uuid_unique() {
 }
 
 static void test_instance_set_get_type_id() {
-  TEST("ItemInstance_set_get_type_id");
+  TEST("EntityInstance_set_get_type_id");
 
-  ItemInstance inst;
+  EntityInstance inst;
   EXPECT_EQ(inst.getTypeID(), 0);
 
   inst.setTypeID(1001);
@@ -134,9 +134,9 @@ static void test_instance_set_get_type_id() {
 }
 
 static void test_instance_ref_count() {
-  TEST("ItemInstance_ref_count");
+  TEST("EntityInstance_ref_count");
 
-  ItemInstance inst;
+  EntityInstance inst;
   EXPECT_EQ(inst.getRefC(), 0);
 
   inst.onAttach();
@@ -153,20 +153,20 @@ static void test_instance_ref_count() {
 }
 
 static void test_instance_non_copyable() {
-  TEST("ItemInstance_non_copyable");
+  TEST("EntityInstance_non_copyable");
 
-  // 编译期检查：ItemInstance 不可拷贝
-  bool not_copyable = !std::is_copy_constructible_v<ItemInstance>;
-  EXPECT(not_copyable, "ItemInstance should NOT be copy constructible");
+  // 编译期检查：EntityInstance 不可拷贝
+  bool not_copyable = !std::is_copy_constructible_v<EntityInstance>;
+  EXPECT(not_copyable, "EntityInstance should NOT be copy constructible");
 }
 
 // ============================================================
-// ItemInstance getComponent 测试
+// EntityInstance getComponent 测试
 // ============================================================
 static void test_get_component_not_found_int32() {
   TEST("getComponent_int32_not_found");
 
-  ItemInstance inst;
+  EntityInstance inst;
   auto *ptr = inst.getComponent<CounterComponent>(999);
   EXPECT(ptr == nullptr,
          "getComponent with no matching index should return nullptr");
@@ -175,7 +175,7 @@ static void test_get_component_not_found_int32() {
 static void test_get_component_not_found_enum() {
   TEST("getComponent_enum_not_found");
 
-  ItemInstance inst;
+  EntityInstance inst;
   auto *ptr = inst.getComponent<CounterComponent>(
       DynamicComponentSemantic::ContentCount);
   EXPECT(ptr == nullptr,
@@ -185,9 +185,9 @@ static void test_get_component_not_found_enum() {
 static void test_get_component_wrong_type() {
   TEST("getComponent_wrong_type");
 
-  // 注意：ItemInstance 当前没有 addComponent 方法，
+  // 注意：EntityInstance 当前没有 addComponent 方法，
   // 以下测试验证不存在的 component 返回 nullptr
-  ItemInstance inst;
+  EntityInstance inst;
   auto *ptr = inst.getComponent<CounterComponent>(
       static_cast<int32_t>(DynamicComponentSemantic::ContentCount));
   EXPECT(ptr == nullptr, "non-existent component should return nullptr");
@@ -488,7 +488,7 @@ static void test_all_static_components_polymorphic() {
 }
 
 // ============================================================
-// ItemSemantic 枚举测试
+// ItemSemantic 枚举测试（游戏层：定义于 core/Entity/Inventory.h）
 // ============================================================
 static void test_item_semantic_enum_values() {
   TEST("ItemSemantic_enum_values");
@@ -506,15 +506,17 @@ static void test_item_semantic_enum_values() {
 static void test_static_component_semantic_values() {
   TEST("StaticComponentSemantic_values");
 
-  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::Quality), 10);
-  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::DefaultCharges), 21);
-  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::MaxContentCount), 30);
-  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::Rule_0), 40);
-  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::Rule_arr), 43);
+  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::Quality), 110);
+  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::DefaultCharges), 121);
+  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::MaxContentCount),
+            130);
+  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::Rule_0), 140);
+  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::Rule_arr), 143);
 
-  // 验证 Static 和 Dynamic 语义不冲突（不同 enum class 可以同值）
-  EXPECT_EQ(static_cast<int32_t>(StaticComponentSemantic::ContainerTypes),
-            static_cast<int32_t>(DynamicComponentSemantic::ContainerTypes));
+  // 验证 Static 和 Dynamic 语义数值空间分离（静态 100+，动态 <100）
+  EXPECT(static_cast<int32_t>(StaticComponentSemantic::ContainerTypes) !=
+             static_cast<int32_t>(DynamicComponentSemantic::ContainerTypes),
+         "static/dynamic semantic spaces should be separated");
 }
 
 // ============================================================
@@ -536,19 +538,19 @@ static void test_dynamic_component_semantic_values() {
 int main() {
   std::cout << "=== ItemType & Component Tests ===" << std::endl;
 
-  // ItemArcheType
+  // EntityArcheType
   test_archetype_default();
   test_archetype_add_static_component();
   test_archetype_add_val_label_component();
 
-  // ItemInstance 基础
+  // EntityInstance 基础
   test_instance_default_construction();
   test_instance_uuid_unique();
   test_instance_set_get_type_id();
   test_instance_ref_count();
   test_instance_non_copyable();
 
-  // ItemInstance getComponent
+  // EntityInstance getComponent
   test_get_component_not_found_int32();
   test_get_component_not_found_enum();
   test_get_component_wrong_type();

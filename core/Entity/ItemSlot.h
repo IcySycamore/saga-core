@@ -1,15 +1,15 @@
-#include "ItemType.h"
+#include "EntityType.h"
 #include <cassert>
 #include <cstdint>
 
 /**
  * @brief
- * ItemSlot是一个用于背包管理的轻量级槽对象，维护堆叠数以及一个物品实例指针(不是数组)；
+ * ItemSlot是一个用于背包管理的轻量级槽对象，维护堆叠数以及一个实体实例指针(不是数组)；
  * @note
  * 使用ItemSlot的模块必须自己保证传入参数和函数调用的正确性。也即保证上下限以及内部指针的状态
  * always replace the item_ptr before adding from 0.
  * @details
- * 维持的该物品实例指针在如下逻辑类型下具有不同语义：
+ * 维持的该实例指针在如下逻辑类型下具有不同语义（物品域）：
  * 类型            最大消耗次数   最大堆叠数量     实例指针语义
  * 非消耗品(装备等)    -1              1           物品本身
  * 非消耗品(材料等)    -1            按需要          代表物
@@ -40,7 +40,7 @@
  */
 class ItemSlot {
 private:
-  ItemInstance *m_item;
+  EntityInstance *m_item;
   int32_t m_stack_num;
 
 public:
@@ -50,9 +50,7 @@ public:
     return !static_cast<bool>(m_item) && m_stack_num == 0;
   }
   // 当计数为零时返回true
-  bool isEmpty() const {
-    return m_stack_num == 0;
-  }
+  bool isEmpty() const { return m_stack_num == 0; }
   int32_t getStackNum() const { return m_stack_num; }
   void increaseStack(int32_t num = 1) {
     assert(num > 0 && "increaseStack: num must be positive");
@@ -63,7 +61,7 @@ public:
     assert(num > 0 && "decreaseStack: num must be positive");
     m_stack_num -= num;
   }
-  void replaceItem(ItemInstance *newItem) {
+  void replaceItem(EntityInstance *newItem) {
     if (m_item) {
       m_item->onDetach();
     }
@@ -76,5 +74,5 @@ public:
     m_stack_num = 0;
     replaceItem(nullptr);
   }
-  ItemInstance *getItem() const { return m_item; }
+  EntityInstance *getItem() const { return m_item; }
 };
