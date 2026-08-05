@@ -4,19 +4,21 @@
 //
 // 依赖: test/test_items.json（自动复制到 build/test/）
 
-#include "core/Item/ItemManager.h"
-#include "core/Item/ItemSlot.h"
-#include "core/Item/ItemType.h"
+#include "core/Entity/Component/Dynamic/CounterComponent.h"
+#include "core/Entity/Component/Static/ValLabelComponent.h"
+#include "core/Entity/EntityManager.h"
+#include "core/Entity/EntityType.h"
+#include "core/Entity/ItemSlot.h"
 #include <cassert>
-#include <cstdint>
 #include <iostream>
 #include <string>
+
 
 // ===================== 轻量断言宏 =====================
 static int g_passed = 0;
 static int g_failed = 0;
 
-#define TEST(name) std::cout << "\n[ RUN      ] " << name << std::endl
+#define TEST(name) std::cout << "\n[ RUN ] " << name << std::endl
 #define EXPECT(cond, msg)                                                      \
   do {                                                                         \
     if (!(cond)) {                                                             \
@@ -32,44 +34,49 @@ static int g_failed = 0;
 static void test_load_valid_json() {
   TEST("load_valid_json");
 
-  auto &mgr = ItemManager::getInstance();
-  bool ok = mgr.initilizeArch("test/test_items.json");
-  EXPECT(ok, "initilize should succeed with valid JSON");
+  auto &mgr = EntityManager::getManager();
+  bool ok = mgr.initArche("test/test_items.json");
+  EXPECT(ok, "initArche should succeed with valid JSON");
 
-  // 验证 4 个物品都加载了
-  const auto *arch = mgr.getArcheType(1001);
-  EXPECT(arch != nullptr, "should find type_id 1001");
-  if (arch) {
-    EXPECT_EQ(arch->m_type_id, 1001);
-    EXPECT_EQ(arch->m_name, "生命药水");
-    EXPECT_EQ(arch->m_max_stack_size, 10);
-    EXPECT_EQ(arch->m_max_charges, 1);
-    EXPECT_EQ(arch->m_price, 50);
-    EXPECT_EQ(arch->m_val_1, 30); // 可选字段有值
-    EXPECT_EQ(arch->m_val_2, 0);  // 可选字段无值 → 默认 0
-  }
-
-  arch = mgr.getArcheType(2001);
-  EXPECT(arch != nullptr, "should find type_id 2001");
-  if (arch) {
-    EXPECT_EQ(arch->m_name, "魔法卷轴");
-    EXPECT_EQ(arch->m_max_charges, 5);
-  }
-
-  arch = mgr.getArcheType(3001);
-  EXPECT(arch != nullptr, "should find type_id 3001");
-  if (arch) {
-    EXPECT_EQ(arch->m_name, "铁剑");
-    EXPECT_EQ(arch->m_max_charges, -1); // 非消耗品
-    EXPECT_EQ(arch->m_val_1, 8);
-  }
-
-  arch = mgr.getArcheType(4001);
+  // 验证 2 个物品都加载了
+  const auto *arch = mgr.getArche(4001);
   EXPECT(arch != nullptr, "should find type_id 4001");
   if (arch) {
-    EXPECT_EQ(arch->m_name, "解毒草");
-    EXPECT_EQ(arch->m_val_1, 0); // JSON 没写 → 默认 0
-    EXPECT_EQ(arch->m_val_2, 0);
+    EXPECT_EQ(arch->m_type_id, 4001);
+    EXPECT_EQ(arch->m_name, "阿司匹林");
+    // components[121] → ValLabel(3)
+    auto it = arch->m_component.find(121);
+    EXPECT(it != arch->m_component.end(), "components should contain key 121");
+    if (it != arch->m_component.end()) {
+      auto *val = dynamic_cast<ValLabelComponent *>(it->second.get());
+      EXPECT(val != nullptr, "components[121] should be ValLabelComponent");
+      if (val)
+        EXPECT_EQ(val->m_val_label, 3);
+    }
+    // defaults[30] → ValLabel(3)
+    auto dit = arch->m_defaults.find(30);
+    EXPECT(dit != arch->m_defaults.end(), "defaults should contain key 30");
+    if (dit != arch->m_defaults.end()) {
+      auto *val = dynamic_cast<ValLabelComponent *>(dit->second.get());
+      EXPECT(val != nullptr, "defaults[30] should be ValLabelComponent");
+      if (val)
+        EXPECT_EQ(val->m_val_label, 3);
+    }
+  }
+
+  arch = mgr.getArche(4002);
+  EXPECT(arch != nullptr, "should find type_id 4002");
+  if (arch) {
+    EXPECT_EQ(arch->m_name, "生命药水");
+    // components[122] → ValLabel(30)
+    auto it = arch->m_component.find(122);
+    EXPECT(it != arch->m_component.end(), "components should contain key 122");
+    if (it != arch->m_component.end()) {
+      auto *val = dynamic_cast<ValLabelComponent *>(it->second.get());
+      EXPECT(val != nullptr, "components[122] should be ValLabelComponent");
+      if (val)
+        EXPECT_EQ(val->m_val_label, 30);
+    }
   }
 }
 
@@ -77,8 +84,8 @@ static void test_load_valid_json() {
 static void test_get_missing_type() {
   TEST("get_missing_type");
 
-  auto &mgr = ItemManager::getInstance();
-  const auto *arch = mgr.getArcheType(99999);
+  auto &mgr = EntityManager::getManager();
+  const auto *arch = mgr.getArche(99999);
   EXPECT(arch == nullptr, "non-existent type_id should return nullptr");
 }
 
@@ -86,80 +93,102 @@ static void test_get_missing_type() {
 static void test_reload() {
   TEST("reload_clears_old_data");
 
-  auto &mgr = ItemManager::getInstance();
+  auto &mgr = EntityManager::getManager();
   bool ok = mgr.reload("test/test_items.json");
   EXPECT(ok, "reload should succeed");
 
   // 之前加载的数据应该还在（同文件 reload）
-  EXPECT(mgr.getArcheType(1001) != nullptr,
-         "after reload, 1001 should still exist");
-  EXPECT(mgr.getArcheType(3001) != nullptr,
-         "after reload, 3001 should still exist");
+  EXPECT(mgr.getArche(4001) != nullptr,
+         "after reload, 4001 should still exist");
+  EXPECT(mgr.getArche(4002) != nullptr,
+         "after reload, 4002 should still exist");
 }
 
-// ===================== 测试 4: createItemInstance =====================
+// ===================== 测试 4: createInstance 动态组件填充
+// =====================
 static void test_create_instance() {
-  TEST("create_item_instance");
+  TEST("create_item_instance_dynamic_defaults");
 
-  auto &mgr = ItemManager::getInstance();
+  auto &mgr = EntityManager::getManager();
   mgr.reload("test/test_items.json");
 
-  auto inst = mgr.createItemInstance(1001);
+  auto inst = mgr.createInstance(4001);
   EXPECT(inst != nullptr,
-         "createItemInstance should return non-null for valid type_id");
+         "createInstance should return non-null for valid type_id");
   if (inst) {
-    EXPECT_EQ(inst->getTypeID(), 1001);
-    // UUID 不应是 nil（已由构造函数自动分配）
+    EXPECT_EQ(inst->getTypeID(), 4001);
     EXPECT(!inst->getUuid().is_nil(), "new instance should have non-nil UUID");
+    // defaults[30] ValLabel(3) → Counter(3)
+    auto *counter = inst->getComponent<CounterComponent>(30);
+    EXPECT(counter != nullptr, "instance should have CounterComponent at 30");
+    if (counter)
+      EXPECT_EQ(counter->getCounter(), 3);
+    // 实例不应持有静态组件（静态组件属于 arche）
+    EXPECT(inst->getComponent<ValLabelComponent>(30) == nullptr,
+           "instance should not hold ValLabelComponent");
   }
 
-  auto inst_null = mgr.createItemInstance(99999);
+  // 4002: defaults[30]→Counter(3)、defaults[40]→Counter(30)
+  auto inst2 = mgr.createInstance(4002);
+  EXPECT(inst2 != nullptr, "create 4002 should succeed");
+  if (inst2) {
+    auto *c30 = inst2->getComponent<CounterComponent>(30);
+    EXPECT(c30 != nullptr, "4002 should have Counter at 30");
+    if (c30)
+      EXPECT_EQ(c30->getCounter(), 3);
+    auto *c40 = inst2->getComponent<CounterComponent>(40);
+    EXPECT(c40 != nullptr, "4002 should have Counter at 40");
+    if (c40)
+      EXPECT_EQ(c40->getCounter(), 30);
+  }
+
+  auto inst_null = mgr.createInstance(99999);
   EXPECT(inst_null == nullptr,
-         "createItemInstance should return null for missing type");
+         "createInstance should return null for missing type");
 }
 
-// ===================== 测试 5: ItemSlot 增删 =====================
-static void test_item_slot() {
-  TEST("item_slot_add_remove");
+// ===================== 测试 5: 池内查询与销毁 =====================
+static void test_get_and_destroy() {
+  TEST("get_and_destroy_instance");
 
-  ItemSlot slot;
-  EXPECT(!slot.isEmpty(), "new slot should not be full");
+  auto &mgr = EntityManager::getManager();
+  mgr.reload("test/test_items.json");
 
-  bool ok = slot.add(3);
-  EXPECT(ok, "add(3) should succeed");
-  EXPECT(slot.isEmpty(), "slot should be full after adding items");
+  auto inst = mgr.createInstance(4001);
+  EXPECT(inst != nullptr, "create 4001 should succeed");
+  if (inst) {
+    auto uuid = inst->getUuid();
+    auto *found = mgr.getInstance(uuid);
+    EXPECT(found == inst, "getInstance should return the same instance");
 
-  ok = slot.add(1);
-  EXPECT(!ok, "add(1) on full slot should fail");
-
-  ok = slot.remove(2);
-  EXPECT(ok, "remove(2) should succeed");
-  EXPECT(slot.isEmpty(), "slot should still be full (3-2=1)");
-
-  ok = slot.remove(1);
-  EXPECT(ok, "remove(1) should succeed");
-  EXPECT(!slot.isEmpty(), "slot should be empty after removing last item");
+    bool ok = mgr.destroyInstance(uuid);
+    EXPECT(ok, "destroy should succeed");
+    EXPECT(mgr.getInstance(uuid) == nullptr,
+           "destroyed instance should be gone from pool");
+    // 重复销毁失败
+    EXPECT(!mgr.destroyInstance(uuid), "double destroy should fail");
+  }
 }
 
 // ===================== 测试 6: 注册与获取 Handler =====================
 static void test_handler_register() {
   TEST("handler_register_and_get");
 
-  auto &mgr = ItemManager::getInstance();
+  auto &mgr = EntityManager::getManager();
 
   bool called = false;
-  mgr.registerHandeler(1001, [&called](ItemInstance &, const ItemArcheType &,
-                                       Entity &) { called = true; });
+  mgr.regHandler(4001, [&called](EntityInstance &, const EntityArcheType &) {
+    called = true;
+  });
 
-  auto handler = mgr.getHandler(1001);
+  auto handler = mgr.getHandler(4001);
   EXPECT(handler != nullptr, "handler should be registered");
 
   // 调用一下
   if (handler) {
-    ItemInstance inst;
-    ItemArcheType arch{};
-    Entity e{10, 10, 10, 10, 10};
-    handler(inst, arch, e);
+    EntityInstance inst;
+    EntityArcheType arch{};
+    handler(inst, arch);
     EXPECT(called, "handler should have been invoked");
   }
 
@@ -169,13 +198,13 @@ static void test_handler_register() {
 
 // ===================== main =====================
 int main() {
-  std::cout << "=== ItemManager Tests ===" << std::endl;
+  std::cout << "=== EntityManager Tests ===" << std::endl;
 
   test_load_valid_json();
   test_get_missing_type();
   test_reload();
   test_create_instance();
-  test_item_slot();
+  test_get_and_destroy();
   test_handler_register();
 
   std::cout << "\n=== Results: " << g_passed << " passed, " << g_failed

@@ -1,7 +1,7 @@
 #pragma once
 #include "../Dice/Dice.h"
 #include "../Dice/Dice20.h"
-#include "../Entity/Entity.h"
+#include "../Entity/EntityType.h"
 #include "../Event/Event.h"
 #include <climits>
 #include <stdexcept>
@@ -19,15 +19,15 @@ enum class CheckType : uint8_t {
 
 template <typename T> class Check : public Event {
 private:
-  Entity *m_source;
-  Entity *m_target;
+  EntityInstance *m_source;
+  EntityInstance *m_target;
   CheckType m_check_type;
   unsigned
       m_numinfo; // 选定的属性(0-4)，当是时间检定时为系统时间，当是特性检定时是固定值
   T m_dice;
 
 public:
-  Check(Entity *source, Entity *target, CheckType ct = CheckType::noCheck,
+  Check(EntityInstance *source, EntityInstance *target, CheckType ct = CheckType::noCheck,
         unsigned selectedAttribute = UINT_MAX);
   std::pair<unsigned, bool> getResult() const;
 };
@@ -35,13 +35,13 @@ public:
 template <typename T> using multiCheck = Check<T> *[3];
 
 template <typename T>
-Check<T>::Check(Entity *source, Entity *target, CheckType ct, unsigned numinfo)
+Check<T>::Check(EntityInstance *source, EntityInstance *target, CheckType ct, unsigned numinfo)
     : Event(), m_source(source), m_target(target), m_check_type(ct),
       m_numinfo(numinfo) {
   if (source->getStatue() == Statue::GM) {
     if (m_check_type == CheckType::opposedCheck) {
       throw std::runtime_error(
-          "Initialize a opposedCheck for GM and another entity");
+          "Initialize a opposedCheck for GM and another EntityInstance");
     }
     if constexpr (std::is_same_v<T, Dice20>)
       m_dice = dice::roll_D20();

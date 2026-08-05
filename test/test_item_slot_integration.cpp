@@ -1,15 +1,15 @@
 // test/test_item_slot_integration.cpp
-// 集成测试：ItemSlot ↔ ItemType（ItemInstance 引用计数、ItemArcheType
+// 集成测试：ItemSlot ↔ ItemType（EntityInstance 引用计数、EntityArcheType
 // 组件查询）
 //
 // 编译与运行:
 //   cd build && cmake .. -G Ninja && ninja test_item_slot_integration &&
 //   ./test_item_slot_integration
 
-#include "core/Item/Component/Dynamic/CounterComponent.h"
-#include "core/Item/Component/Static/ValLabelComponent.h"
-#include "core/Item/ItemSlot.h"
-#include "core/Item/ItemType.h"
+#include "core/Entity/Component/Dynamic/CounterComponent.h"
+#include "core/Entity/Component/Static/ValLabelComponent.h"
+#include "core/Entity/ItemSlot.h"
+#include "core/Entity/EntityType.h"
 #include <cassert>
 #include <cstdint>
 #include <iostream>
@@ -38,7 +38,7 @@ static int g_failed = 0;
 static void test_single_slot_attach_detach() {
   TEST("single_slot_attach_detach");
 
-  ItemInstance inst;
+  EntityInstance inst;
   ItemSlot slot;
 
   // 初始状态
@@ -76,7 +76,7 @@ static void test_single_slot_attach_detach() {
 static void test_slot_clear() {
   TEST("slot_clear");
 
-  ItemInstance inst;
+  EntityInstance inst;
   ItemSlot slot;
 
   slot.replaceItem(&inst);
@@ -97,8 +97,8 @@ static void test_slot_clear() {
 static void test_replace_item_switches_refcount() {
   TEST("replace_item_switches_refcount");
 
-  ItemInstance instA;
-  ItemInstance instB;
+  EntityInstance instA;
+  EntityInstance instB;
   ItemSlot slot;
 
   slot.replaceItem(&instA);
@@ -120,7 +120,7 @@ static void test_replace_item_switches_refcount() {
 static void test_replace_self_noop_refcount() {
   TEST("replace_self_noop_refcount");
 
-  ItemInstance inst;
+  EntityInstance inst;
   ItemSlot slot;
 
   slot.replaceItem(&inst);
@@ -140,7 +140,7 @@ static void test_replace_self_noop_refcount() {
 static void test_multi_slot_shared_representative() {
   TEST("multi_slot_shared_representative");
 
-  ItemInstance proxy; // 代表物，如铁矿石的全局唯一实例
+  EntityInstance proxy; // 代表物，如铁矿石的全局唯一实例
   proxy.setTypeID(1001);
 
   // 3 个槽都堆叠铁矿石
@@ -177,7 +177,7 @@ static void test_multi_slot_shared_representative() {
 static void test_equipment_single_stack() {
   TEST("equipment_single_stack");
 
-  ItemInstance sword; // 装备，max_stack = 1
+  EntityInstance sword; // 装备，max_stack = 1
   ItemSlot slot;
 
   slot.replaceItem(&sword);
@@ -197,7 +197,7 @@ static void test_equipment_single_stack() {
 static void test_batch_stack_operations() {
   TEST("batch_stack_operations");
 
-  ItemInstance inst;
+  EntityInstance inst;
   ItemSlot slot;
 
   slot.replaceItem(&inst);
@@ -226,14 +226,14 @@ static void test_batch_stack_operations() {
 static void test_get_item_pointer() {
   TEST("get_item_pointer");
 
-  ItemInstance inst;
+  EntityInstance inst;
   inst.setTypeID(2001);
 
   ItemSlot slot;
   EXPECT_EQ(slot.getItem(), nullptr);
 
   slot.replaceItem(&inst);
-  ItemInstance *ptr = slot.getItem();
+  EntityInstance *ptr = slot.getItem();
   EXPECT(ptr != nullptr, "getItem should return non-null after replace");
   EXPECT_EQ(ptr->getTypeID(), 2001);
 
@@ -242,14 +242,14 @@ static void test_get_item_pointer() {
 }
 
 // ============================================================
-// 场景 9: ItemArcheType 组件 + ItemInstance 配合
+// 场景 9: EntityArcheType 组件 + EntityInstance 配合
 // ============================================================
 static void test_archetype_to_instance_copy_component() {
   TEST("archetype_to_instance_copy_component");
 
   // 模拟引擎层从 ArcheType 读取静态组件，
-  // 游戏层据此初始化 ItemInstance 的动态组件
-  ItemArcheType arch{};
+  // 游戏层据此初始化 EntityInstance 的动态组件
+  EntityArcheType arch{};
   arch.m_type_id = 1001;
   arch.m_name = "生命药水";
 
@@ -269,9 +269,9 @@ static void test_archetype_to_instance_copy_component() {
 
   int32_t initialCharges = staticVal ? staticVal->m_val_label : 0;
 
-  // 给 ItemInstance 创建对应的动态计数器
-  ItemInstance inst;
-  // 注意：当前 ItemInstance 没有 addComponent 方法
+  // 给 EntityInstance 创建对应的动态计数器
+  EntityInstance inst;
+  // 注意：当前 EntityInstance 没有 addComponent 方法
   // 这里验证 getComponent 在无组件时返回 nullptr
   auto *counter = inst.getComponent<CounterComponent>(
       DynamicComponentSemantic::ContentCount);
@@ -279,19 +279,19 @@ static void test_archetype_to_instance_copy_component() {
 }
 
 // ============================================================
-// 场景 10: 多个 ItemInstance 之间 UUID 唯一性
+// 场景 10: 多个 EntityInstance 之间 UUID 唯一性
 // ============================================================
 static void test_multi_instance_uuid_uniqueness() {
   TEST("multi_instance_uuid_uniqueness");
 
   constexpr int kCount = 50;
-  // ItemInstance 不可拷贝/移动（含 unique_ptr 成员），
-  // 用 unique_ptr 存储（ItemManager 也是这样管理生命周期）
-  std::vector<std::unique_ptr<ItemInstance>> instances;
+  // EntityInstance 不可拷贝/移动（含 unique_ptr 成员），
+  // 用 unique_ptr 存储（EntityManager 也是这样管理生命周期）
+  std::vector<std::unique_ptr<EntityInstance>> instances;
   instances.reserve(kCount);
 
   for (int i = 0; i < kCount; ++i) {
-    auto inst = std::make_unique<ItemInstance>();
+    auto inst = std::make_unique<EntityInstance>();
     inst->setTypeID(i);
     instances.push_back(std::move(inst));
   }
@@ -308,14 +308,14 @@ static void test_multi_instance_uuid_uniqueness() {
 }
 
 // ============================================================
-// 场景 11: ItemInstance 配合 ItemSlot 生命周期顺序
+// 场景 11: EntityInstance 配合 ItemSlot 生命周期顺序
 // ============================================================
 static void test_slot_release_before_instance_destroy() {
   TEST("slot_release_before_instance_destroy");
 
-  // ItemInstance 的析构不在 ref_count != 0 的 slot 持有下发生
+  // EntityInstance 的析构不在 ref_count != 0 的 slot 持有下发生
   // 这是调用者的责任，这里验证顺序正确的场景
-  ItemInstance *inst = new ItemInstance();
+  EntityInstance *inst = new EntityInstance();
   ItemSlot slot;
 
   slot.replaceItem(inst);
@@ -335,7 +335,7 @@ static void test_slot_release_before_instance_destroy() {
 static void test_stack_underflow_assert() {
   TEST("stack_underflow_assert_detected");
 
-  ItemInstance inst;
+  EntityInstance inst;
   ItemSlot slot;
   slot.replaceItem(&inst);
   slot.increaseStack(2);

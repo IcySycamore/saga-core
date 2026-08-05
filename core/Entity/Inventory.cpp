@@ -1,11 +1,16 @@
 #include "Inventory.h"
-#include "ItemType.h"
+#include "EntityType.h"
 #include <cmath>
 #include <cstdint>
 
-Inventory::Inventory(int32_t capacity, ItemManager &item_manager)
+// TODO(游戏层适配): 以下方法依赖旧 API（getArcheType/m_max_stack_size/
+// setCharges/getVal1/m_val_0/relavent_type/getItemSemantic），
+// 需按新组件体系重写（语义键见
+// StaticComponentSemantic/DynamicComponentSemantic）。
+
+Inventory::Inventory(int32_t capacity, EntityManager &entity_manager)
     : m_current_capacity(capacity), m_max_capacity(capacity),
-      m_manager(item_manager) {}
+      m_manager(entity_manager) {}
 int32_t Inventory::canFit(int32_t type_id, int32_t slot_index) const {
   auto slot = m_slots.at(slot_index);
   // 空槽返回typeId的 max stack size
@@ -94,7 +99,7 @@ bool Inventory::use(int32_t index) {
   return 0;
 }
 // 丢弃，从背包中丢弃一（整）格物品
-ItemInstance *Inventory::remove(int32_t slot_index) {
+EntityInstance *Inventory::remove(int32_t slot_index) {
   auto item_slot = m_slots[slot_index];
   auto item = item_slot.getItem();
   item_slot.clear();
@@ -105,8 +110,8 @@ bool Inventory::sort_the_slots() {}
 bool Inventory::interact(int32_t src, int32_t des) {
   auto &src_slot = m_slots[src];
   auto &des_slot = m_slots[des];
-  ItemInstance *src_item = src_slot.getItem();
-  ItemInstance *des_item = des_slot.getItem();
+  EntityInstance *src_item = src_slot.getItem();
+  EntityInstance *des_item = des_slot.getItem();
   int32_t src_type = src_item->getTypeID();
   int32_t des_type = des_item->getTypeID();
   if (src_type == des_type) {
