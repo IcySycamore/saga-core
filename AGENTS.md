@@ -27,10 +27,11 @@ Single-context: one `CONTEXT.md` at the repo root + `docs/adr/` for architecture
 
 ## 项目约定
 
-- **分层**：`core/` 下引擎层（Component、ItemInstance、ItemSlot、引用计数）与游戏层（ItemArcheType、Inventory、ItemManager、Handler、代表物规则）分离
-- **命名**：ItemInstance（非 ItemEntity）；CounterVecComponent 统一动态数组；CounterArrComponent 已废弃
-- **所有权**：ItemManager 的 `unordered_map<uuid, unique_ptr<ItemInstance>>` 是唯一所有者；ItemSlot 只持裸指针 + 引用计数
+- **分层**：`core/` 下引擎层（Component、EntityInstance、EntityArcheType、EntityManager、ItemSlot、引用计数）与游戏层（Inventory、Handler、代表物规则、ItemSemantic 物品分类）分离
+- **命名**：EntityInstance/EntityArcheType/EntityManager（泛化自 Item 系，适用于物品/生物等所有实体）；CounterVecComponent 统一动态数组；CounterArrComponent 已废弃
+- **所有权**：EntityManager 的 `unordered_map<uuid, unique_ptr<EntityInstance>>` 是唯一所有者；ItemSlot 只持裸指针 + 引用计数
 - **信号语义**：handler = 1:1 唯一处理者；回调/信号 = 1:N 多播；不引入 boost::signals2
-- **持久化**：JSON 可读格式（未来切二进制）；ItemManager 存实例池 + 代表物注册表，Inventory 存槽（uuid+count）
+- **持久化**：JSON 可读格式（未来切二进制）；EntityManager 存实例池 + 代表物注册表，Inventory 存槽（uuid+count）
+- **物品域概念**：ItemSemantic（消耗/堆叠分类）属于游戏层，定义于 `Inventory.h`；语义枚举（Static/DynamicComponentSemantic）是引擎层通用概念
 - **返回值约定**：`void` = 总是成功（原子操作），`bool` = 可能失败
 - 测试用词须与 `CONTEXT.md` 术语一致；改动前先读相关 ADR
