@@ -193,7 +193,7 @@ EntityHandler EntityManager::getHandler(int32_t type_id) {
 }
 EntityInstance *EntityManager::createInstance(int32_t type_id) {
   std::unique_lock lock(m_pool_mutex);
-#define REP_SEMANTIC_OPTIMIZATION // 代表物快速路径（生物等有动态组件的类型不会命中）
+#define REP_SEMANTIC_OPTIMIZATION
 #ifdef REP_SEMANTIC_OPTIMIZATION
   if (m_rep_type_2_uuid.contains(type_id)) {
     return m_pool[m_rep_type_2_uuid[type_id]].get();
@@ -205,7 +205,6 @@ EntityInstance *EntityManager::createInstance(int32_t type_id) {
 
   auto inst = std::make_unique<EntityInstance>();
   inst->setTypeID(type_id);
-  // 遍历 arche 的 m_defaults，按静态组件类型创建对应的动态组件初始值
   for (const auto &[semantic, static_comp] : itArc->m_defaults) {
     if (auto *val = dynamic_cast<ValLabelComponent *>(static_comp.get())) {
       // ValLabel → Counter
