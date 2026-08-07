@@ -35,7 +35,6 @@ set(CORE_HEADERS
     core/Event/LoadScene.h
     core/Event/Move.h
     core/Event/Plot.h
-    core/Event/Time.h
     core/helper/RandomEng.h
     core/helper/UuidGen.h
     core/Entity/EntityManager.h
@@ -48,6 +47,7 @@ set(CORE_HEADERS
     core/math/TransformTools.h
     core/math/Vector2.h
     core/math/Vector3.h
+    core/Time/Clock.h
 )
 
 add_library(trpg_core STATIC ${CORE_SOURCES} ${CORE_HEADERS})
@@ -108,3 +108,14 @@ add_test(NAME ItemManagerTest COMMAND test_item_manager)
 add_test(NAME ItemTypeTest COMMAND test_item_type)
 add_test(NAME ItemSlotIntegrationTest COMMAND test_item_slot_integration)
 add_test(NAME MathTest COMMAND test_math)
+add_test(NAME TimeTest COMMAND test_time)
+
+add_executable(test_time
+    test/test_time.cpp
+)
+
+target_include_directories(test_time PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${Boost_INCLUDE_DIRS}
+)
+target_link_libraries(test_time PRIVATE Boost::json)
