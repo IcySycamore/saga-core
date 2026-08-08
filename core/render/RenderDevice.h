@@ -3,8 +3,8 @@
  * @brief 图形后端抽象接口（RenderDevice：底层设备抽象，对应 Godot
  * RenderingDevice / Unreal RHI）
  * @namespace render
- * @note 原则:
- *   - 纯接口：不包含任何 SDL3/OpenGL/平台头
+ * @note
+ *   - 纯虚接口
  *   - 性能：mesh 上传一次，绘制引用句柄
  *   - 所有权：device 由外部拥有，本接口不管理生命周期
  *   - 安全：span/句柄
@@ -46,7 +46,7 @@ struct MeshHandle {
   friend bool operator==(MeshHandle a, MeshHandle b) = default;
 };
 
-/// 顶点：位置 + 颜色（未来可扩展法线/UV 字段）
+/// 顶点：位置 + 颜色  ==========可扩展法线/UV 字段=============
 struct Vertex {
   math::Vector3 pos;   ///< 模型空间位置
   math::Vector3 color; ///< RGB（0..1）
@@ -55,12 +55,12 @@ struct Vertex {
 /// 渲染设备抽象，句柄应当在外部构造
 class RenderDevice {
 public:
-  /** @brief 析构函数（虚，支持多态释放） */
+  /** @brief 析构函数 */
   virtual ~RenderDevice() = default;
 
   /**
-   * @brief 初始化设备（绑定平台窗口）
-   * @param win 平台窗口句柄（外部创建，设备不拥有）
+   * @brief 初始化设备
+   * @param win 平台窗口句柄
    * @param width 逻辑宽度（像素）
    * @param height 逻辑高度（像素）
    * @return true 成功；false 失败
@@ -70,7 +70,7 @@ public:
 
   /**
    * @brief 释放设备资源
-   * @note 不销毁外部窗口（窗口由应用层拥有）
+   * @note 不销毁外部窗（窗口由应用层拥有）
    */
   virtual void shutdown() = 0;
 

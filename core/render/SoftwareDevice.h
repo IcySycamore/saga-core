@@ -26,7 +26,7 @@
 
 namespace render {
 
-class SoftwareBackend : public RenderDevice {
+class SoftwareDevice : public RenderDevice {
 public:
   // ============================ 生命周期 ============================
 

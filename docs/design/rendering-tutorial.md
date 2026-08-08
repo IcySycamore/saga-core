@@ -386,7 +386,7 @@ $$
 ### 5.7 代码
 
 ```cpp
-// SoftwareBackend 里的深度缓冲
+// SoftwareDevice 里的深度缓冲
 std::vector<float> depthBuffer(width * height, 1.0f);  // 初始全是"无限远"
 // 深度来自 mvp 变换后的 z（Matrix4x4::operator* 已算好）
 ```
@@ -460,7 +460,7 @@ $$
 
 **"一切皆插值"**：深度、颜色、纹理坐标全是同一个 (α,β,γ)。
 
-### 6.7 完整光栅化伪代码（SoftwareBackend 核心）
+### 6.7 完整光栅化伪代码（SoftwareDevice 核心）
 
 ```cpp
 for 每个三角形 (v0,v1,v2) [屏幕坐标]:
@@ -492,10 +492,10 @@ for 每个三角形 (v0,v1,v2) [屏幕坐标]:
 
 ---
 
-# 第 7 讲：软件光栅化的完整实现（SoftwareBackend）
+# 第 7 讲：软件光栅化的完整实现（SoftwareDevice）
 
 > 前 6 讲建立的是"数学心智模型"；本讲开始，把这些数学**一行行写进 CPU 代码**。
-> 我们的实现：纯 C++ 软光栅 `core/render/SoftwareBackend.h`——不用 GPU，自己算每个像素。
+> 我们的实现：纯 C++ 软光栅 `core/render/SoftwareDevice.h`——不用 GPU，自己算每个像素。
 
 ## 7.0 为什么先做"软件光栅化"而不是直接上 OpenGL
 
@@ -799,9 +799,9 @@ int width() const; int height() const;          // 尺寸
 
 ```
 应用层（render_demo）──── 只认识 ────▶ RenderDevice（纯接口）
-                                          ├── SDL3RenderDevice（线框）
-                                          ├── SoftwareBackend（软光栅）
-                                          └── 未来：OpenGLBackend
+                                          ├── SDL3Device（线框）
+                                          ├── SoftwareDevice（软光栅）
+                                          └── 未来：OpenGLDevice
 ```
 
 ## 8.2 RenderDevice 纯接口（零 SDL 依赖）
@@ -832,7 +832,7 @@ public:
 
 ### 为什么不把 SDL 写进接口
 
-`RenderDevice.h` 顶部没有 `#include <SDL3/SDL.h>`——这是硬约束。SDL3 只出现在**两个**地方：`SDL3RenderDevice.h`（后端实现）和 `render_demo.cpp`（应用层建窗口）。这样：
+`RenderDevice.h` 顶部没有 `#include <SDL3/SDL.h>`——这是硬约束。SDL3 只出现在**两个**地方：`SDL3Device.h`（后端实现）和 `render_demo.cpp`（应用层建窗口）。这样：
 
 - 引擎层可编译可测试（不依赖 SDL 环境）
 - 未来换成 OpenGL/别的窗口库，接口纹丝不动
@@ -916,13 +916,13 @@ class Camera {
 
 ## 8.5 三个后端对比——同一接口，三种实现
 
-|            | SDL3RenderDevice     | SoftwareBackend      | OpenGLBackend        |
-| ---------- | -------------------- | -------------------- | -------------------- |
-| 像素谁算   | SDL 渲染器（驱动）   | 自己的 CPU 代码      | GPU（固定管线）      |
-| 绘制方式   | 线框（线段）         | 实心三角形 + 深度    | 实心三角形 + 深度    |
-| 是否含平台 | SDL（实现细节）      | 否（纯引擎层）       | SDL + OpenGL         |
-| 帧缓冲     | SDL 内部管理         | 自己管理，可读可测   | GPU 后缓冲           |
-| 用途       | 对照/简单调试        | 教学主体 + 确定性测试 | 实际显示/性能验证   |
+|            | SDL3Device         | SoftwareDevice        | OpenGLDevice      |
+| ---------- | ------------------ | --------------------- | ----------------- |
+| 像素谁算   | SDL 渲染器（驱动） | 自己的 CPU 代码       | GPU（固定管线）   |
+| 绘制方式   | 线框（线段）       | 实心三角形 + 深度     | 实心三角形 + 深度 |
+| 是否含平台 | SDL（实现细节）    | 否（纯引擎层）        | SDL + OpenGL      |
+| 帧缓冲     | SDL 内部管理       | 自己管理，可读可测    | GPU 后缓冲        |
+| 用途       | 对照/简单调试      | 教学主体 + 确定性测试 | 实际显示/性能验证 |
 
 **同一个 `RenderDevice` 接口，应用层代码一字不改，切换后端只改命令行参数**（`--backend sdl3|software|opengl`）。这是抽象层的全部价值。
 
@@ -944,20 +944,20 @@ glLoadMatrixf(mvp.data());          // 列主序直传
 glEnd();
 ```
 
-| 管线   | 顶点怎么给 | 矩阵怎么给 | 适合 |
-| ------ | ---------- | ---------- | ---- |
-| 固定管线 | 逐个 glVertex3f | glLoadMatrixf | 教学/最小 MVP |
-| 现代管线 | VAO/VBO 批量上传 | 着色器 uniform（uMVP） | 生产 |
+| 管线     | 顶点怎么给       | 矩阵怎么给             | 适合          |
+| -------- | ---------------- | ---------------------- | ------------- |
+| 固定管线 | 逐个 glVertex3f  | glLoadMatrixf          | 教学/最小 MVP |
+| 现代管线 | VAO/VBO 批量上传 | 着色器 uniform（uMVP） | 生产          |
 
 **列主序直传**：`Matrix4x4` 存储是列主序 `m[col*4+row]`，与 OpenGL 矩阵内存布局完全一致 → `glLoadMatrixf(mvp.data())` 直接传，无需转置。这是当初定矩阵约定的红利。
 
 ### GPU 免费送的三件事（对照软光栅的劳作）
 
-| 能力 | 软光栅（手写） | OpenGL（一行） |
-| ---- | -------------- | -------------- |
-| 深度测试 | 深度缓冲 + setPixel 比较 | `glEnable(GL_DEPTH_TEST)` |
-| 透视除法 | transformVertex 手算 w | 硬件自动 |
-| 近平面裁剪 | invalid 丢弃（简化） | **完整裁剪**（跨近平面的三角形被正确切开） |
+| 能力       | 软光栅（手写）           | OpenGL（一行）                             |
+| ---------- | ------------------------ | ------------------------------------------ |
+| 深度测试   | 深度缓冲 + setPixel 比较 | `glEnable(GL_DEPTH_TEST)`                  |
+| 透视除法   | transformVertex 手算 w   | 硬件自动                                   |
+| 近平面裁剪 | invalid 丢弃（简化）     | **完整裁剪**（跨近平面的三角形被正确切开） |
 
 特别是**近平面裁剪**：软光栅是"w≤0 丢弃"的简化版（画面边缘会缺角），OpenGL 是完整裁剪——这正是软光栅里留作后续的作业，GPU 免费给你。
 

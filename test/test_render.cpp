@@ -1,12 +1,12 @@
 // test/test_render.cpp
-// SoftwareBackend 软光栅单测（确定性验证）
+// SoftwareDevice 软光栅单测（确定性验证）
 //
 // 编译与运行:
 //   cmake -S . -B build/vscodeBuild && cmake --build build/vscodeBuild --target
 //   test_render
 //   .\build\vscodeBuild\test_render.exe
 
-#include "core/render/SoftwareBackend.h"
+#include "core/render/SoftwareDevice.h"
 #include <iostream>
 
 // ===================== 轻量断言宏 =====================
@@ -37,7 +37,7 @@ static constexpr uint32_t kClearColor = 0xFF302018u;
 static void test_init_clear() {
   TEST("init_clear");
 
-  render::SoftwareBackend sw;
+  render::SoftwareDevice sw;
   render::NativeWindowHandle<void> dummy;
   EXPECT(sw.init(dummy, 64, 48), "init should succeed");
   EXPECT_EQ(sw.width(), 64);
@@ -51,7 +51,7 @@ static void test_init_clear() {
 static void test_fullscreen_triangle() {
   TEST("fullscreen_triangle");
 
-  render::SoftwareBackend sw;
+  render::SoftwareDevice sw;
   render::NativeWindowHandle<void> dummy;
   sw.init(dummy, 32, 32);
 
@@ -77,7 +77,7 @@ static void test_fullscreen_triangle() {
 static void test_depth_test() {
   TEST("depth_test");
 
-  render::SoftwareBackend sw;
+  render::SoftwareDevice sw;
   render::NativeWindowHandle<void> dummy;
   sw.init(dummy, 32, 32);
 
@@ -110,7 +110,7 @@ static void test_depth_test() {
 static void test_grid_lines() {
   TEST("grid_lines");
 
-  render::SoftwareBackend sw;
+  render::SoftwareDevice sw;
   render::NativeWindowHandle<void> dummy;
   sw.init(dummy, 64, 64);
 
@@ -136,7 +136,7 @@ static void test_grid_lines() {
 static void test_invalid_handle() {
   TEST("invalid_handle");
 
-  render::SoftwareBackend sw;
+  render::SoftwareDevice sw;
   render::NativeWindowHandle<void> dummy;
   sw.init(dummy, 32, 32);
 
@@ -151,7 +151,7 @@ static void test_invalid_handle() {
 
 // ===================== main =====================
 int main() {
-  std::cout << "=== SoftwareBackend Tests ===" << std::endl;
+  std::cout << "=== SoftwareDevice Tests ===" << std::endl;
 
   test_init_clear();
   test_fullscreen_triangle();

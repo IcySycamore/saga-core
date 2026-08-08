@@ -4,7 +4,7 @@
  * @namespace render
  * @note 职责:
  *   - 用 OpenGL（兼容模式固定管线）实现 RenderDevice 纯接口
- *   - 与 SoftwareBackend 共用同一接口 → 双后端画面一致（M5 验收）
+ *   - 与 SoftwareDevice 共用同一接口 → 双后端画面一致（M5 验收）
  *   - 深度测试由 GPU 内置（GL_DEPTH_TEST），近平面裁剪由 GPU 处理
  * @note 设计:
  *   - 固定管线（glBegin/glEnd/glLoadMatrixf）：MVP 列主序直传，顶点逐个发出
@@ -25,7 +25,7 @@
 
 namespace render {
 
-class OpenGLBackend : public RenderDevice {
+class OpenGLDevice : public RenderDevice {
 public:
   // ============================ 生命周期 ============================
 
@@ -47,7 +47,7 @@ public:
     m_height = height;
     m_gl = SDL_GL_CreateContext(m_window);
     if (!m_gl) {
-      SDL_Log("OpenGLBackend: SDL_GL_CreateContext failed: %s", SDL_GetError());
+      SDL_Log("OpenGLDevice: SDL_GL_CreateContext failed: %s", SDL_GetError());
       return false;
     }
     SDL_GL_SetSwapInterval(1); // vsync（垂直同步）

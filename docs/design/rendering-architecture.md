@@ -12,8 +12,8 @@
 可交付物：
 
 1. 一个可运行的窗口程序（`render_demo`）：SDL2 窗口 + 可交互 3D 场景
-2. 一个可测试的软件光栅化后端（`SoftwareBackend`）：CPU 渲染到帧缓冲，可单测
-3. 一个 OpenGL 后端（`OpenGLBackend`）：GPU 渲染，作为实际显示后端
+2. 一个可测试的软件光栅化后端（`SoftwareDevice`）：CPU 渲染到帧缓冲，可单测
+3. 一个 OpenGL 后端（`OpenGLDevice`）：GPU 渲染，作为实际显示后端
 4. 可替换后端的渲染抽象层（`RenderDevice` + `RenderServer`）
 5. 主循环整合：`clockns::Clock` 驱动逻辑 tick + 独立渲染帧
 
@@ -36,8 +36,8 @@
                │ 后端接口
 ┌──────────────▼─────────────────────────────────┐
 │ 图形抽象层  RenderDevice（core/render/）        │
-│  ├── SoftwareBackend：CPU 光栅化 → 帧缓冲（可测）│
-│  └── OpenGLBackend：GPU → SDL2 窗口（显示）     │
+│  ├── SoftwareDevice：CPU 光栅化 → 帧缓冲（可测）│
+│  └── OpenGLDevice：GPU → SDL2 窗口（显示）     │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -77,8 +77,8 @@
 ```
 core/render/
   RenderDevice.h       // RenderDevice 纯接口（底层设备抽象）
-  SoftwareBackend.h    // 软光栅（framebuffer + depthBuffer）
-  OpenGLBackend.h      // OpenGL 后端
+  SoftwareDevice.h    // 软光栅（framebuffer + depthBuffer）
+  OpenGLDevice.h      // OpenGL 后端
   RenderServer.h       // 命令队列 + 设备调度
   SceneGraph.h         // Transform 树（local/world 矩阵）
   Camera.h             // 相机（位置/朝向/投影）
@@ -241,7 +241,7 @@ private:
 
 ### 3.3 软件光栅化要点（对应教学第 6 讲）
 
-- `SoftwareBackend` 持 `std::vector<uint32_t> m_framebuffer` + `std::vector<float> m_depthBuffer`
+- `SoftwareDevice` 持 `std::vector<uint32_t> m_framebuffer` + `std::vector<float> m_depthBuffer`
 - `drawMesh`：把顶点 MVP 变换 → 屏幕坐标，按教学 6.7 伪代码光栅化（重心坐标 + 深度测试）
 - 线框模式：先画三角形边（Bresenham 直线），MVP 变换后连线
 - **可测试性**：渲染已知三角形 → 断言帧缓冲像素颜色/深度
@@ -277,7 +277,7 @@ while (running) {
 | 线框立方体      | 12 条边，MVP 变换 + 旋转动画                              |
 | 多物体          | 几个立方体不同位置/大小（验证 M 矩阵）                    |
 | 深度测试        | 立方体互相遮挡正确（软光栅断言 + OpenGL 默认开启）        |
-| 后端切换        | 运行时按键切换 SoftwareBackend ↔ OpenGLBackend            |
+| 后端切换        | 运行时按键切换 SoftwareDevice ↔ OpenGLDevice              |
 | 逻辑 tick       | Clock 固定步长驱动旋转动画，渲染帧独立                    |
 
 ## 5. 验收规则
@@ -320,8 +320,8 @@ while (running) {
 | 里程碑 | 内容                                | 验收                       |
 | ------ | ----------------------------------- | -------------------------- |
 | M1     | RenderDevice 接口 + SDL2 空窗口     | 窗口出现、可关窗           |
-| M2     | SoftwareBackend 画网格线            | 软光栅可见网格             |
+| M2     | SoftwareDevice 画网格线             | 软光栅可见网格             |
 | M3     | Camera + MVP 串联（正交/透视）      | 网格随相机变化正确         |
 | M4     | 线框立方体 + 旋转 + 深度测试        | 多立方体遮挡正确           |
-| M5     | OpenGLBackend 同样内容              | 双后端画面一致             |
+| M5     | OpenGLDevice 同样内容               | 双后端画面一致             |
 | M6     | RenderServer + Engine 主循环 + 输入 | 完整可交互 demo + 测试全绿 |

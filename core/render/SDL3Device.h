@@ -14,7 +14,7 @@
 
 namespace render {
 
-class SDL3RenderDevice : public RenderDevice {
+class SDL3Device : public RenderDevice {
 
 private:
   SDL_Window *m_window;
@@ -23,9 +23,9 @@ private:
   int m_height;
   std::vector<std::vector<Vertex>> m_meshes; // 顶点缓存
 public:
-  SDL3RenderDevice()
+  SDL3Device()
       : m_window(nullptr), m_renderer(nullptr), m_height(0), m_width(0) {}
-  ~SDL3RenderDevice() override { shutdown(); }
+  ~SDL3Device() override { shutdown(); }
 
   bool init(const NativeWindowHandle<void> &win, int width,
             int height) override {
@@ -42,8 +42,7 @@ public:
      */
     m_renderer = SDL_CreateRenderer(m_window, nullptr);
     if (!m_renderer) {
-      SDL_Log("SDL3RenderDevice: SDL_CreateRenderer failed: %s",
-              SDL_GetError());
+      SDL_Log("SDL3Device: SDL_CreateRenderer failed: %s", SDL_GetError());
       return false;
     }
     return true;

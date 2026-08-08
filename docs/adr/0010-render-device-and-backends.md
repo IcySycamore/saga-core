@@ -5,7 +5,7 @@
 ## 决策
 
 1. **接口命名与分层**：底层设备抽象命名为 `RenderDevice`（对应 Godot RenderingDevice / Unreal RHI），负责初始化、资源、绘制；上层命令层 `RenderServer`（M6 引入，Godot RenderingServer 风格）负责命令队列与设备调度。逻辑层不直接碰设备。
-2. **纯接口，零 SDL 依赖**：`RenderDevice.h` 不包含任何 SDL3/OpenGL/平台头。SDL 只存在于后端实现（`SDL3RenderDevice.h`）与应用层（`render_demo.cpp`）。引擎层可独立编译测试，未来换平台/API 不动接口。
+2. **纯接口，零 SDL 依赖**：`RenderDevice.h` 不包含任何 SDL3/OpenGL/平台头。SDL 只存在于后端实现（`SDL3Device.h`）与应用层（`render_demo.cpp`）。引擎层可独立编译测试，未来换平台/API 不动接口。
 3. **强类型句柄**：资源句柄用独立结构体（`MeshHandle`：`value` + `kInvalid` + `operator bool` + `operator==`），不同资源类型不可混传（编译期防护）；平台窗口句柄用 `NativeWindowHandle<NativeT>` 模板 + 类型擦除（`NativeWindowHandle<void>`）进入接口。
 4. **像素格式约定（RGBA 内存序）**：帧缓冲 `uint32_t` 按**内存序 RGBA** 打包 `(A<<24)|(B<<16)|(G<<8)|R`（R 最低字节），匹配 `SDL_PIXELFORMAT_RGBA32`。清屏色 `0xFF302018u`（深灰蓝 24,32,48）。**全链路（打包/插值/测试提取/BMP 导出）统一此约定**——字节序不匹配曾导致纯红背景事故。
 5. **固定渲染分辨率 + letterbox 输出缩放**：软光栅帧缓冲固定 1280×720，不随窗口 resize 重建；窗口拉伸由显示层 letterbox（等比缩放 + 居中 + 背景填充）适配。好处：画面比例恒定、FPS 恒定（动画速度不随窗口大小变化）。

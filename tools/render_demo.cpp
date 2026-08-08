@@ -10,10 +10,10 @@
  * 说明:
  *   - 本文件是"应用层"：负责创建 SDL3 窗口（容器）、组装 RenderDevice、场景内容
  *   - 引擎层 core/render 不包含 SDL 头；SDL 只在这里（窗口创建）与
- * SDL3RenderDevice.h
+ * SDL3Device.h
  *   - M3：Camera + 透视投影（MVP 串联）
  *   - M4：线框立方体 + Clock 驱动旋转动画 + 多物体
- *   - M5：SoftwareBackend（软光栅）接入，用 SDL 纹理显示帧缓冲
+ *   - M5：SoftwareDevice（软光栅）接入，用 SDL 纹理显示帧缓冲
  *
  * 操作:
  *   - P 键：切换透视/正交投影
@@ -22,10 +22,10 @@
 
 #include "core/Time/Clock.h"
 #include "core/render/Camera.h"
-#include "core/render/OpenGLBackend.h"
+#include "core/render/OpenGLDevice.h"
 #include "core/render/RenderDevice.h"
-#include "core/render/SDL3RenderDevice.h"
-#include "core/render/SoftwareBackend.h"
+#include "core/render/SDL3Device.h"
+#include "core/render/SoftwareDevice.h"
 
 #include <SDL3/SDL.h>
 #include <algorithm>
@@ -107,12 +107,12 @@ static std::vector<render::Vertex> makeCubeSolid(float half,
 }
 
 /**
- * @brief 把 SoftwareBackend 帧缓冲保存为 BMP 文件（调试用）
+ * @brief 把 SoftwareDevice 帧缓冲保存为 BMP 文件（调试用）
  * @param sw 软光栅后端
  * @param path 输出路径
  * @return true 成功
  */
-static bool swSaveBMP(const render::SoftwareBackend *sw, const char *path) {
+static bool swSaveBMP(const render::SoftwareDevice *sw, const char *path) {
   FILE *fp = std::fopen(path, "wb");
   if (!fp) {
     return false;
@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
 
   /* ---- 组装 RenderDevice ----
    * SDL3 后端：直接用 SDL 渲染器画（线框）
-   * SoftwareBackend：CPU 光栅化到帧缓冲，再用 SDL 纹理显示 */
+   * SoftwareDevice：CPU 光栅化到帧缓冲，再用 SDL 纹理显示 */
   render::NativeWindowHandle<SDL_Window> handle;
   handle.native = window;
 
@@ -237,14 +237,15 @@ int main(int argc, char *argv[]) {
   }
 
   render::RenderDevice *device = nullptr;
-  render::SDL3RenderDevice sdlDevice;
-  render::SoftwareBackend swDevice;
-  render::OpenGLBackend glDevice;
+  render::SDL3Device sdlDevice;
+  render::SoftwareDevice swDevice;
+  render::OpenGLDevice glDevice;
   if (useSoftware) {
     swDevice.init({}, width, height); // 软光栅无需窗口句柄
     device = &swDevice;
   } else if (useOpenGL) {
-    glDevice.init(handle, width, height); // GPU 后端（需 SDL_WINDOW_OPENGL 窗口）
+    glDevice.init(handle, width,
+                  height); // GPU 后端（需 SDL_WINDOW_OPENGL 窗口）
     device = &glDevice;
   } else {
     sdlDevice.init(handle, width, height);
@@ -265,14 +266,12 @@ int main(int argc, char *argv[]) {
   const bool solidMesh = (backend != Backend::Sdl3);
   // 旋转立方体
   const render::MeshHandle rotatingCube =
-      solidMesh
-          ? device->createMesh(makeCubeSolid(0.8f, {0.9f, 0.9f, 0.9f}))
-          : device->createMesh(makeCubeEdges(0.8f, {0.9f, 0.9f, 0.9f}));
+      solidMesh ? device->createMesh(makeCubeSolid(0.8f, {0.9f, 0.9f, 0.9f}))
+                : device->createMesh(makeCubeEdges(0.8f, {0.9f, 0.9f, 0.9f}));
   // 静止立方体（橙色，偏移到右侧，用于对比遮挡）
   const render::MeshHandle staticCube =
-      solidMesh
-          ? device->createMesh(makeCubeSolid(0.5f, {1.0f, 0.6f, 0.2f}))
-          : device->createMesh(makeCubeEdges(0.5f, {1.0f, 0.6f, 0.2f}));
+      solidMesh ? device->createMesh(makeCubeSolid(0.5f, {1.0f, 0.6f, 0.2f}))
+                : device->createMesh(makeCubeEdges(0.5f, {1.0f, 0.6f, 0.2f}));
 
   // 逻辑时钟（固定步长，驱动动画）
   clockns::Clock clock;
@@ -336,9 +335,10 @@ int main(int argc, char *argv[]) {
 
     device->endFrame();
 
-    // 显示：SDL3/OpenGL 后端已在 endFrame 内 present；软光栅把帧缓冲上传到纹理再画
+    // 显示：SDL3/OpenGL 后端已在 endFrame 内
+    // present；软光栅把帧缓冲上传到纹理再画
     if (useSoftware) {
-      const auto sw = static_cast<render::SoftwareBackend *>(device);
+      const auto sw = static_cast<render::SoftwareDevice *>(device);
       /* 关键：用当前帧缓冲尺寸拷贝（resize 后帧缓冲/纹理已重建为
        * 新尺寸，若用初始 width/height 会行错位 → 画面一片一片） */
       const int fbW = sw->width();
@@ -377,7 +377,7 @@ int main(int argc, char *argv[]) {
     if (!shotSaved && ++frame >= 3) {
       if (useSoftware) {
         // 软光栅：帧缓冲直接存 BMP
-        const auto sw = static_cast<render::SoftwareBackend *>(device);
+        const auto sw = static_cast<render::SoftwareDevice *>(device);
         if (swSaveBMP(sw, shotPath)) {
           std::printf("截图已保存: %s\n", shotPath);
         } else {

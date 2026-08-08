@@ -55,10 +55,10 @@ set(CORE_HEADERS
     core/math/Vector2.h
     core/math/Vector3.h
     core/render/Camera.h
-    core/render/OpenGLBackend.h
+    core/render/OpenGLDevice.h
     core/render/RenderDevice.h
-    core/render/SDL3RenderDevice.h
-    core/render/SoftwareBackend.h
+    core/render/SDL3Device.h
+    core/render/SoftwareDevice.h
     core/Time/Clock.h
 )
 
@@ -176,7 +176,7 @@ if(TARGET SDL3::SDL3main)
 else()
     target_link_libraries(render_demo PRIVATE SDL3::SDL3)
 endif()
-# OpenGL（OpenGLBackend 用固定管线；Windows 上链接 opengl32）
+# OpenGL（OpenGLDevice 用固定管线；Windows 上链接 opengl32）
 find_package(OpenGL REQUIRED)
 if(OpenGL_FOUND)
     message(STATUS "OpenGL found: ${OPENGL_LIBRARIES}")
