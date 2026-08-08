@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @brief 四元数（旋转）
- * @namespace math
+ * @namespace lCYC::math
  * @note 内存布局: 4 × float = 16 字节
  * @note 避免欧拉角万向锁；用于实体朝向、相机旋转、插值旋转
  * @note C++20，constexpr 优先，无 RTTI
@@ -12,7 +12,7 @@
 #include <cassert>
 #include <cmath>
 
-namespace math {
+namespace lCYC::math {
 
 struct Quaternion {
   float x;
@@ -224,4 +224,4 @@ inline Quaternion lookRotation(const Vector3 &forward, const Vector3 &up) {
   }
 }
 
-} // namespace math
+} // namespace lCYC::math

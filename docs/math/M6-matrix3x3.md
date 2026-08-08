@@ -22,7 +22,7 @@
 - [ ] `fromMatrix4x4()` / `toMatrix4x4()`（提取旋转/缩放部分，去平移）
 - [ ] `normalMatrix()`（= 逆转置，用于法线变换）
 - [ ] 2D：`rotation2D(angle)` / `translation2D(x,y)`（3x3 齐次，与 M3 配合）
-- [ ] 命名空间 `math::`
+- [ ] 命名空间 `lCYC::math::`
 
 ## 性能
 

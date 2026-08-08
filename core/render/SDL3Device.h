@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @brief SDL3 渲染设备实现
- * @namespace render
+ * @namespace lCYC::render
  * @note 职责:
  *   - 用 SDL3 软件渲染器实现 RenderDevice 纯接口
  *   - 生命周期：窗口绑定 / 帧控制 / 资源 / 绘制
@@ -12,7 +12,7 @@
 #include <SDL3/SDL.h>
 #include <vector>
 
-namespace render {
+namespace lCYC::render {
 
 class SDL3Device : public RenderDevice {
 
@@ -76,7 +76,7 @@ public:
     }
   }
 
-  void drawMesh(MeshHandle h, const math::Matrix4x4 &mvp) override {
+  void drawMesh(MeshHandle h, const lCYC::math::Matrix4x4 &mvp) override {
     if (h.value >= m_meshes.size() || m_meshes[h.value].empty()) {
       return;
     }
@@ -110,11 +110,11 @@ public:
     return ok;
   }
 
-  void drawGrid(float size, int divs, const math::Matrix4x4 &vp) override {
+  void drawGrid(float size, int divs, const lCYC::math::Matrix4x4 &vp) override {
     // 地面网格：XZ 平面（y=0），从 -size 到 +size，共 divs 格
     const float half = size * 0.5f;
     const float step = size / static_cast<float>(divs);
-    const math::Vector3 color(0.4f, 0.5f, 0.6f); // 灰蓝网格线
+    const lCYC::math::Vector3 color(0.4f, 0.5f, 0.6f); // 灰蓝网格线
 
     // 沿 X 方向的线（固定 z）
     for (int i = 0; i <= divs; ++i) {
@@ -140,13 +140,13 @@ private:
    * @param b 线段端点 B
    * @note 内部做：矩阵变换（含齐次除法）→ 裁剪 → NDC→屏幕映射 → SDL_RenderLine
    */
-  void drawSegment(const math::Matrix4x4 &m, const Vertex &a, const Vertex &b) {
+  void drawSegment(const lCYC::math::Matrix4x4 &m, const Vertex &a, const Vertex &b) {
     if (!m_renderer) {
       return;
     }
     // 顶点 → 裁剪（含齐次除法）→ NDC
-    const math::Vector3 ndcA = m * a.pos;
-    const math::Vector3 ndcB = m * b.pos;
+    const lCYC::math::Vector3 ndcA = m * a.pos;
+    const lCYC::math::Vector3 ndcB = m * b.pos;
     // 裁剪：完全在 NDC 之外的线段跳过（简化：任一端点越界就跳过）
     if (isOutsideNDC(ndcA) && isOutsideNDC(ndcB)) {
       return;
@@ -173,10 +173,10 @@ private:
    * @param p 归一化设备坐标
    * @return true 在可视范围外
    */
-  static bool isOutsideNDC(const math::Vector3 &p) {
+  static bool isOutsideNDC(const lCYC::math::Vector3 &p) {
     return p.x < -1.0f || p.x > 1.0f || p.y < -1.0f || p.y > 1.0f ||
            p.z < -1.0f || p.z > 1.0f;
   }
 };
 
-} // namespace render
+} // namespace lCYC::render

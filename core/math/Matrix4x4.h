@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @brief 四阶矩阵（模型/视图/投影变换 + 齐次坐标）
- * @namespace math
+ * @namespace lCYC::math
  * @note 存储约定: 列主序 column-major，m[col * 4 + row]
  * @note 矩阵乘语义: A * B = "先应用 B 再应用 A"（列向量约定 v' = M * v）
  * @note C++20，constexpr 优先，无 RTTI
@@ -13,7 +13,7 @@
 #include <cassert>
 #include <cmath>
 
-namespace math {
+namespace lCYC::math {
 
 struct Matrix4x4 {
   float m[16];
@@ -323,4 +323,4 @@ inline Matrix4x4 lookAt(const Vector3 &eye, const Vector3 &target,
   return result;
 }
 
-} // namespace math
+} // namespace lCYC::math

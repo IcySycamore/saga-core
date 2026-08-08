@@ -3,13 +3,13 @@
 #include <cmath>
 #include <string>
 
-namespace math {
+namespace lCYC::math {
 
 /**
  * @brief 三维向量连续空间
  * @note  内存布局: 3 × float = 12 字节，SIMD 友好, C++20，constexpr 优先，无
  RTTI
- * @namespace math
+ * @namespace lCYC::math
  */
 struct Vector3 {
   float x;
@@ -186,4 +186,4 @@ constexpr Vector3 operator*(float scalar, const Vector3 &v) {
   return v * scalar;
 }
 
-} // namespace math
+} // namespace lCYC::math

@@ -22,7 +22,7 @@
 - [ ] `Vector3 transformPoint(mat, v)` / `transformDirection(mat, v)`（明确区分：point 带平移，direction 不带）
 - [ ] `Vector3 rotateVector(q, v)` 便捷封装
 - [ ] 一致性测试：trs → decompose → 还原（容差内相等）
-- [ ] 命名空间 `math::`
+- [ ] 命名空间 `lCYC::math::`
 
 ## 性能
 

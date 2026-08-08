@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @brief 三阶矩阵（旋转/法线/2D 变换）
- * @namespace math
+ * @namespace lCYC::math
  * @note 存储约定: 列主序 column-major，m[col * 3 + row]（与 Matrix4x4 一致）
  * @note C++20，constexpr 优先，无 RTTI
  * @note 规格: docs/math/M6-matrix3x3.md
@@ -15,7 +15,7 @@
 #include <cassert>
 #include <cmath>
 
-namespace math {
+namespace lCYC::math {
 
 struct Matrix3x3 {
   float m[9];
@@ -217,7 +217,7 @@ constexpr Matrix3x3 rotationZ(float angleRad) {
 
 /// 由四元数构造 3x3 旋转矩阵（命名加 3x3 后缀避免与 Matrix4x4::rotation 冲突）
 inline Matrix3x3 rotation3x3(const Quaternion &q) {
-  return Matrix3x3::fromMatrix4x4(math::rotation(q));
+  return Matrix3x3::fromMatrix4x4(lCYC::math::rotation(q));
 }
 
 /// 3x3 缩放矩阵（命名加 3x3 后缀避免与 Matrix4x4::scale 冲突）
@@ -249,4 +249,4 @@ constexpr Matrix3x3 translation2D(float x, float y) {
   return result;
 }
 
-} // namespace math
+} // namespace lCYC::math

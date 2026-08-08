@@ -23,7 +23,7 @@
 - [ ] 静态常量：`zero`/`one`/`up`/`down`/`left`/`right`/`forward`/`back`
 - [ ] **语义澄清**：`one()` = 全 1 向量（非单位向量，长度 √3）；单位向量用 `up`/`down`/`left`/`right`/`forward`/`back`
 - [ ] `toString()` 便于日志调试
-- [ ] 命名空间 `math::`
+- [ ] 命名空间 `lCYC::math::`
 
 ## 性能
 

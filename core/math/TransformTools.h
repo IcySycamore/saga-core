@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @brief 组合工具（TRS/欧拉互转/变换封装）
- * @namespace math
+ * @namespace lCYC::math
  * @note 应用层入口：供 ECS Transform、Camera、场景图直接消费
  * @note 欧拉顺序约定: 标准 ZYX（应用顺序先绕 X 再绕 Y 再绕 Z），全库统一
  *       与 Quaternion::euler 一致（q = qz·qy·qx）
@@ -17,7 +17,7 @@
 #include <cassert>
 #include <cmath>
 
-namespace math {
+namespace lCYC::math {
 
 // ============================ TRS 合成 ============================
 
@@ -26,7 +26,7 @@ namespace math {
 inline Matrix4x4 trs(const Vector3 &pos, const Quaternion &rot,
                      const Vector3 &scale) {
   Matrix4x4 result =
-      math::rotation(rot); // 旋转（4x4，显式调用 math::rotation）
+      lCYC::math::rotation(rot); // 旋转（4x4，显式调用 lCYC::math::rotation）
   // 应用缩放到旋转矩阵的列
   result.at(0, 0) *= scale.x;
   result.at(1, 0) *= scale.x;
@@ -146,7 +146,7 @@ inline Vector3 quatToEuler(const Quaternion &q) {
 
   if (std::abs(sinYaw) >= 1.0f - 1e-6f) {
     // 万向锁：yaw = ±90°，pitch 与 roll 合并
-    yaw = std::copysign(math::HALF_PI, sinYaw);
+    yaw = std::copysign(lCYC::math::HALF_PI, sinYaw);
     pitch = std::atan2(y, w);
     roll = 0.0f;
   } else {
@@ -191,4 +191,4 @@ inline Vector3 rotateVector(const Quaternion &q, const Vector3 &v) {
   return q * v;
 }
 
-} // namespace math
+} // namespace lCYC::math

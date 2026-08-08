@@ -15,7 +15,7 @@ from mpl_toolkits.mplot3d import Axes3D
 matplotlib.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "SimSun"]
 matplotlib.rcParams["axes.unicode_minus"] = False
 
-# ============ 复现 C++ math::orthographic（列主序，但这里用行主序等价计算） ============
+# ============ 复现 C++ lCYC::math::orthographic（列主序，但这里用行主序等价计算） ============
 # orthographic(left=-1, right=1, bottom=-1, top=1, near=0.1, far=10)
 L, R, B, T, N, F = -1.0, 1.0, -1.0, 1.0, 0.1, 10.0
 # 列主序矩阵（与 C++ 一致）：m[col*4+row]

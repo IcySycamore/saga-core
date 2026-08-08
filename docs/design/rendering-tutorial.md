@@ -128,7 +128,7 @@ $$
 
 ### 3.4 朝向 = `lookAt`
 
-`math::lookAt(eye, target, up)` 返回完整 4×4 矩阵，同时含位置（平移）+ 朝向（旋转）。心里可一直叫它"摄像头矩阵"。
+`lCYC::math::lookAt(eye, target, up)` 返回完整 4×4 矩阵，同时含位置（平移）+ 朝向（旋转）。心里可一直叫它"摄像头矩阵"。
 
 ### 3.5 MVP 预告
 
@@ -142,8 +142,8 @@ $$
 | ------------------ | ----------------------------- | ----------- |
 | 4×4 矩阵 + 乘法    | `Matrix4x4` + `operator*`     | ✅ 301 断言 |
 | 齐次坐标/w 除法    | `operator*(Vector3)` 自动处理 | ✅          |
-| 平移/缩放/旋转组合 | `math::trs()`                 | ✅          |
-| 摄像头矩阵         | `math::lookAt()`              | ✅          |
+| 平移/缩放/旋转组合 | `lCYC::math::trs()`                 | ✅          |
+| 摄像头矩阵         | `lCYC::math::lookAt()`              | ✅          |
 
 ---
 
@@ -277,14 +277,14 @@ P 一次做四件事：缩放 x、缩放 y、映射 z 到 [-1,1]（供深度缓�
 ### 4.6 库已就绪
 
 ```cpp
-math::Matrix4x4 P = math::perspective(fovY, aspect, near, far);   // 透视
-math::Matrix4x4 P2 = math::orthographic(l, r, b, t, near, far);   // 正交
+lCYC::math::Matrix4x4 P = lCYC::math::perspective(fovY, aspect, near, far);   // 透视
+lCYC::math::Matrix4x4 P2 = lCYC::math::orthographic(l, r, b, t, near, far);   // 正交
 ```
 
 ### 4.7 MVP 凑齐
 
 ```cpp
-math::Matrix4x4 mvp = P * V * M;   // 从右往左：M(物体) → V(相机) → P(投影)
+lCYC::math::Matrix4x4 mvp = P * V * M;   // 从右往左：M(物体) → V(相机) → P(投影)
 ```
 
 **`mvp = P*V*M` 是整个渲染管线的数学核心。**
@@ -320,9 +320,9 @@ $$
 
 **MVP = P·V·M**（无固定闭合形式，乘积完成"模型点→裁剪坐标"）：
 
-- **M** = `math::trs(pos,rot,scale)`：物体摆进世界
-- **V** = `math::lookAt(eye,target,up)`：世界搬相机脚下 + 转正朝向（= R·T(-eye)）
-- **P** = `math::perspective(...)`：近大远小
+- **M** = `lCYC::math::trs(pos,rot,scale)`：物体摆进世界
+- **V** = `lCYC::math::lookAt(eye,target,up)`：世界搬相机脚下 + 转正朝向（= R·T(-eye)）
+- **P** = `lCYC::math::perspective(...)`：近大远小
 
 **P 有 5 个非零项（不是 4 个）**，代入 fov=60°, aspect=16/9, n=0.1, f=100：
 
@@ -536,7 +536,7 @@ for 每个三角形 (v0,v1,v2) [屏幕坐标]:
 这是第 4 讲数学的**代码落地**。核心难点：**透视除法需要 w，而 `Matrix4x4::operator*` 只返回 Vector3（丢掉了 w）**，所以这里**手动**算裁剪坐标四分量：
 
 ```cpp
-ScreenVert transformVertex(const Vertex &v, const math::Matrix4x4 &m) const {
+ScreenVert transformVertex(const Vertex &v, const lCYC::math::Matrix4x4 &m) const {
   // 裁剪坐标（含齐次 w）——手动计算以获取 w 符号
   const float cx = m[0]*v.pos.x + m[4]*v.pos.y + m[8]*v.pos.z + m[12];
   const float cy = m[1]*v.pos.x + m[5]*v.pos.y + m[9]*v.pos.z + m[13];
@@ -547,7 +547,7 @@ ScreenVert transformVertex(const Vertex &v, const math::Matrix4x4 &m) const {
     return {0.0f, 0.0f, 1.0f, toRGBA(v.color), true};
   }
   const float inv = 1.0f / cw;                 // 透视除法（÷深度）
-  const math::Vector3 ndc{cx*inv, cy*inv, cz*inv};
+  const lCYC::math::Vector3 ndc{cx*inv, cy*inv, cz*inv};
   const float sx = (ndc.x + 1.0f) * 0.5f * m_width;   // NDC [-1,1] → 屏幕像素
   const float sy = (1.0f - ndc.y) * 0.5f * m_height;  // 屏幕 y 向下，所以翻转
   const float depth = (ndc.z + 1.0f) * 0.5f;          // NDC z [-1,1] → 深度 [0,1]
@@ -601,7 +601,7 @@ uint32_t c = (a<<24) | (b<<16) | (g<<8) | r;
 std::fill(m_framebuffer.begin(), m_framebuffer.end(), 0xFF302018u);
 
 // 单像素打包（color 0..1 → 通道 0..255，R 最低字节）
-static uint32_t toRGBA(const math::Vector3 &c) {
+static uint32_t toRGBA(const lCYC::math::Vector3 &c) {
   const auto b = [](float x){ int v = (int)(x*255.f+0.5f); return (uint32_t)(v<0?0:(v>255?255:v)); };
   return (0xFFu<<24) | (b(c.z)<<16) | (b(c.y)<<8) | b(c.x);
 }
@@ -745,7 +745,7 @@ static uint32_t lerp3(uint32_t c0, uint32_t c1, uint32_t c2, float a, float b, f
 ## 7.8 drawMesh 完整流程：图元组装 + 近平面裁剪
 
 ```cpp
-void drawMesh(MeshHandle h, const math::Matrix4x4 &mvp) override {
+void drawMesh(MeshHandle h, const lCYC::math::Matrix4x4 &mvp) override {
   if (h.value >= m_meshes.size() || m_meshes[h.value].empty()) return;
   const auto &verts = m_meshes[h.value];
   const size_t n = verts.size();
@@ -816,8 +816,8 @@ public:
   virtual void endFrame() = 0;      // 交换缓冲/显示
   virtual MeshHandle createMesh(std::span<const Vertex> verts) = 0;
   virtual void destroyMesh(MeshHandle h) = 0;
-  virtual void drawMesh(MeshHandle h, const math::Matrix4x4& mvp) = 0;
-  virtual void drawGrid(float size, int divs, const math::Matrix4x4& vp) = 0;
+  virtual void drawMesh(MeshHandle h, const lCYC::math::Matrix4x4& mvp) = 0;
+  virtual void drawGrid(float size, int divs, const lCYC::math::Matrix4x4& vp) = 0;
 };
 ```
 
@@ -902,7 +902,7 @@ class Camera {
   void setPerspective(float fovY, float near_, float far_);
   void setOrthographic(float l, float r, float b, float t, float near_, float far_);
   void lookAt(const Vector3& eye, const Vector3& target, const Vector3& up = Vector3::up());
-  Matrix4x4 view() const;                    // = math::lookAt(...)
+  Matrix4x4 view() const;                    // = lCYC::math::lookAt(...)
   Matrix4x4 projection(float aspect) const;  // 按类型选 P
   Matrix4x4 viewProjection(float aspect) const;  // = projection(aspect) * view()
 };
@@ -911,7 +911,7 @@ class Camera {
 **设计要点**：
 
 - **只存参数，不存矩阵**：每次 `viewProjection(aspect)` 现场算（demo 阶段矩阵生成开销可忽略；未来需要时缓存 + dirty 标记）。这样 aspect（依赖窗口/帧缓冲）可以在渲染时才传入，不用每次改窗口都重建相机。
-- **`Proj` 枚举在类外**（`render::Proj`）：避免嵌套枚举的 `Camera::Proj::Perspective` 冗长写法。
+- **`Proj` 枚举在类外**（`lCYC::render::Proj`）：避免嵌套枚举的 `Camera::Proj::Perspective` 冗长写法。
 - **正交投影的 aspect 修正**：正交范围固定 ±3 时，若屏幕不是正方形，画面会被拉伸变形。所以正交要**按 aspect 修正 x 范围**：`-3*aspect, 3*aspect, -3, 3`。这是第 4 讲"aspect 修正屏幕非方形"在正交下的具体实现（透视已由矩阵内修正，正交需要调用方手动传范围）。
 
 ## 8.5 三个后端对比——同一接口，三种实现
@@ -1039,8 +1039,8 @@ while (running):
 ```cpp
 const double t = clock.getLogicTime();               // 逻辑时间（tick 对齐）
 const float angle = (float)t * 1.5f;                 // 角速度 1.5 rad/s
-Quaternion rot = math::axisAngle({0,1,0}, angle);    // 绕 Y 轴
-Matrix4x4 M_rot = math::translation({0,0.8,0}) * math::rotation(rot);
+Quaternion rot = lCYC::math::axisAngle({0,1,0}, angle);    // 绕 Y 轴
+Matrix4x4 M_rot = lCYC::math::translation({0,0.8,0}) * lCYC::math::rotation(rot);
 ```
 
 **顺序口诀复习（第 2 讲：先做的靠右）**：`T·R` 从右往左读 = 先 `R`（绕自身中心转）再 `T`（平移到网格上方 y=0.8，让半边长 0.8 的立方体底贴地面）。**如果写成 `R·T`，立方体会绕世界原点公转飞出去**——这正是第 2 讲 canvas `translate`+`rotate` 顺序问题在 3D 的翻版。

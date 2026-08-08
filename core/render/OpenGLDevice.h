@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @brief OpenGL 渲染后端（RenderDevice 的 GPU 实现）
- * @namespace render
+ * @namespace lCYC::render
  * @note 职责:
  *   - 用 OpenGL（兼容模式固定管线）实现 RenderDevice 纯接口
  *   - 与 SoftwareDevice 共用同一接口 → 双后端画面一致（M5 验收）
@@ -23,7 +23,7 @@
 #include <cstdio>
 #include <vector>
 
-namespace render {
+namespace lCYC::render {
 
 class OpenGLDevice : public RenderDevice {
 public:
@@ -109,7 +109,7 @@ public:
    * @param mvp 模型视图投影矩阵 = P*V*M（列主序，直传 GPU）
    * @note 近平面裁剪由 GPU 自动处理（与软光栅 invalid 丢弃不同的完整裁剪）
    */
-  void drawMesh(MeshHandle h, const math::Matrix4x4 &mvp) override {
+  void drawMesh(MeshHandle h, const lCYC::math::Matrix4x4 &mvp) override {
     if (h.value >= m_meshes.size() || m_meshes[h.value].empty()) {
       return;
     }
@@ -140,7 +140,8 @@ public:
    * @param divs 每边格数
    * @param vp 视图投影矩阵 V*P（列主序）
    */
-  void drawGrid(float size, int divs, const math::Matrix4x4 &vp) override {
+  void drawGrid(float size, int divs,
+                const lCYC::math::Matrix4x4 &vp) override {
     const float half = size * 0.5f;
     const float step = size / static_cast<float>(divs);
     loadMVP(vp);
@@ -180,7 +181,7 @@ private:
    * @brief 把列主序矩阵直传给 GPU（MODELVIEW 载入；PROJECTION 恒等）
    * @param m 变换矩阵（列主序，与 OpenGL 内存布局一致，直接 glLoadMatrixf）
    */
-  static void loadMVP(const math::Matrix4x4 &m) {
+  static void loadMVP(const lCYC::math::Matrix4x4 &m) {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glMatrixMode(GL_MODELVIEW);
@@ -256,4 +257,4 @@ private:
   std::vector<std::vector<Vertex>> m_meshes;
 };
 
-} // namespace render
+} // namespace lCYC::render

@@ -33,7 +33,7 @@ static int g_failed = 0;
 static void test_fixed_step() {
   TEST("fixed_step");
 
-  clockns::Clock clock;
+  lCYC::clock::Clock clock;
   EXPECT_EQ(clock.getTickRate(), 60.0f);
   EXPECT_NEAR(clock.getTickDelta(), 1.0 / 60.0, 1e-9);
 
@@ -47,7 +47,7 @@ static void test_fixed_step() {
 static void test_accumulator() {
   TEST("accumulator_residual");
 
-  clockns::Clock clock;
+  lCYC::clock::Clock clock;
   // 0.005s 不足一个步长(0.0167) → 0 tick
   clock.addDuration(0.005);
   EXPECT_EQ(clock.getTick(), 0);
@@ -63,7 +63,7 @@ static void test_accumulator() {
 static void test_time_scale_slowmo() {
   TEST("time_scale_slowmo");
 
-  clockns::Clock clock;
+  lCYC::clock::Clock clock;
   clock.setScale(0.5);
 
   clock.addDuration(0.1);
@@ -75,7 +75,7 @@ static void test_time_scale_slowmo() {
 static void test_time_scale_pause() {
   TEST("time_scale_pause");
 
-  clockns::Clock clock;
+  lCYC::clock::Clock clock;
   clock.setScale(0.0);
 
   clock.addDuration(0.5);
@@ -87,7 +87,7 @@ static void test_time_scale_pause() {
 static void test_spike_protection() {
   TEST("spike_protection");
 
-  clockns::Clock clock;
+  lCYC::clock::Clock clock;
   // 注入 5s（远超 maxFrameTime=0.1）→ 逻辑侧被钳制为 0.1s（6 tick）
   clock.addDuration(5.0);
   EXPECT_EQ(clock.getTick(), 6); // 0.1/0.0167
@@ -97,7 +97,7 @@ static void test_spike_protection() {
 static void test_death_spiral() {
   TEST("death_spiral");
 
-  clockns::Clock clock;
+  lCYC::clock::Clock clock;
   // 0.5s 被钳制到 0.1 → 6 tick（正常补帧，不超 maxTicksPerFrame=16）
   clock.addDuration(0.5);
   EXPECT_EQ(clock.getTick(), 6);
@@ -111,7 +111,7 @@ static void test_death_spiral() {
 static void test_alpha() {
   TEST("alpha");
 
-  clockns::Clock clock;
+  lCYC::clock::Clock clock;
   clock.addDuration(0.008); // 半个步长
   EXPECT_EQ(clock.getTick(), 0);
   EXPECT(clock.getAlpha() > 0.0 && clock.getAlpha() < 1.0,
@@ -123,7 +123,7 @@ static void test_alpha() {
 static void test_change_tick_rate() {
   TEST("change_tick_rate");
 
-  clockns::Clock clock(30.0f);
+  lCYC::clock::Clock clock(30.0f);
   EXPECT_EQ(clock.getTickRate(), 30.0f);
   EXPECT_NEAR(clock.getTickDelta(), 1.0 / 30.0, 1e-9);
 
@@ -135,7 +135,7 @@ static void test_change_tick_rate() {
 static void test_system_time() {
   TEST("system_time");
 
-  clockns::Clock clock;
+  lCYC::clock::Clock clock;
   std::time_t now = clock.getSysTime();
   std::time_t start = clock.getSysStart();
   EXPECT(now >= start, "sysStart should be <= sysNow");
@@ -145,7 +145,7 @@ static void test_system_time() {
 static void test_update_injection() {
   TEST("update_injection");
 
-  clockns::Clock clock;
+  lCYC::clock::Clock clock;
   using namespace std::chrono;
   auto t0 = steady_clock::now();
   auto t1 = t0 + milliseconds(50);

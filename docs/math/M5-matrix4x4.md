@@ -24,7 +24,7 @@
 - [ ] `perspective(fovY, aspect, near, far)`（右手系）
 - [ ] `lookAt(eye, target, up)`
 - [ ] 数据访问：`operator[]`(行/列，约定明确) + `data()`（裸数组，供 GPU）
-- [ ] 命名空间 `math::`
+- [ ] 命名空间 `lCYC::math::`
 
 ## 存储约定（2026-08-06 拍板：列主序）
 

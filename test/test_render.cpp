@@ -37,8 +37,8 @@ static constexpr uint32_t kClearColor = 0xFF302018u;
 static void test_init_clear() {
   TEST("init_clear");
 
-  render::SoftwareDevice sw;
-  render::NativeWindowHandle<void> dummy;
+  lCYC::render::SoftwareDevice sw;
+  lCYC::render::NativeWindowHandle<void> dummy;
   EXPECT(sw.init(dummy, 64, 48), "init should succeed");
   EXPECT_EQ(sw.width(), 64);
   EXPECT_EQ(sw.height(), 48);
@@ -51,20 +51,20 @@ static void test_init_clear() {
 static void test_fullscreen_triangle() {
   TEST("fullscreen_triangle");
 
-  render::SoftwareDevice sw;
-  render::NativeWindowHandle<void> dummy;
+  lCYC::render::SoftwareDevice sw;
+  lCYC::render::NativeWindowHandle<void> dummy;
   sw.init(dummy, 32, 32);
 
   // 覆盖整个屏幕的三角形（三个顶点在 NDC 角落）
-  const render::Vertex verts[3] = {
+  const lCYC::render::Vertex verts[3] = {
       {{-1.0f, -1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}}, // 红
       {{3.0f, -1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
       {{-1.0f, 3.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
   };
-  const render::MeshHandle h = sw.createMesh(verts);
+  const lCYC::render::MeshHandle h = sw.createMesh(verts);
 
   sw.beginFrame();
-  sw.drawMesh(h, math::Matrix4x4::identity());
+  sw.drawMesh(h, lCYC::math::Matrix4x4::identity());
   sw.endFrame();
 
   // 屏幕中心应被红色覆盖
@@ -77,27 +77,27 @@ static void test_fullscreen_triangle() {
 static void test_depth_test() {
   TEST("depth_test");
 
-  render::SoftwareDevice sw;
-  render::NativeWindowHandle<void> dummy;
+  lCYC::render::SoftwareDevice sw;
+  lCYC::render::NativeWindowHandle<void> dummy;
   sw.init(dummy, 32, 32);
 
   // 两个全屏三角形：一个远（z=0.5），一个近（z=-0.5）
-  const render::Vertex far[3] = {
+  const lCYC::render::Vertex far[3] = {
       {{-1.0f, -1.0f, 0.5f}, {0.0f, 0.0f, 1.0f}}, // 蓝（远）
       {{3.0f, -1.0f, 0.5f}, {0.0f, 0.0f, 1.0f}},
       {{-1.0f, 3.0f, 0.5f}, {0.0f, 0.0f, 1.0f}},
   };
-  const render::Vertex near_[3] = {
+  const lCYC::render::Vertex near_[3] = {
       {{-1.0f, -1.0f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // 红（近）
       {{3.0f, -1.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
       {{-1.0f, 3.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
   };
-  const render::MeshHandle hFar = sw.createMesh(far);
-  const render::MeshHandle hNear = sw.createMesh(near_);
+  const lCYC::render::MeshHandle hFar = sw.createMesh(far);
+  const lCYC::render::MeshHandle hNear = sw.createMesh(near_);
 
   sw.beginFrame();
-  sw.drawMesh(hFar, math::Matrix4x4::identity());  // 先画远的
-  sw.drawMesh(hNear, math::Matrix4x4::identity()); // 再画近的
+  sw.drawMesh(hFar, lCYC::math::Matrix4x4::identity());  // 先画远的
+  sw.drawMesh(hNear, lCYC::math::Matrix4x4::identity()); // 再画近的
   sw.endFrame();
 
   // 中心应显示红色（近的遮挡远的，无论绘制顺序）
@@ -110,12 +110,12 @@ static void test_depth_test() {
 static void test_grid_lines() {
   TEST("grid_lines");
 
-  render::SoftwareDevice sw;
-  render::NativeWindowHandle<void> dummy;
+  lCYC::render::SoftwareDevice sw;
+  lCYC::render::NativeWindowHandle<void> dummy;
   sw.init(dummy, 64, 64);
 
   sw.beginFrame();
-  sw.drawGrid(2.0f, 4, math::Matrix4x4::identity());
+  sw.drawGrid(2.0f, 4, lCYC::math::Matrix4x4::identity());
   sw.endFrame();
 
   // 网格线应产生非背景像素
@@ -136,13 +136,13 @@ static void test_grid_lines() {
 static void test_invalid_handle() {
   TEST("invalid_handle");
 
-  render::SoftwareDevice sw;
-  render::NativeWindowHandle<void> dummy;
+  lCYC::render::SoftwareDevice sw;
+  lCYC::render::NativeWindowHandle<void> dummy;
   sw.init(dummy, 32, 32);
 
   sw.beginFrame();
-  sw.drawMesh(render::MeshHandle{}, math::Matrix4x4::identity()); // 无效句柄
-  sw.drawMesh(render::MeshHandle{999}, math::Matrix4x4::identity());
+  sw.drawMesh(lCYC::render::MeshHandle{}, lCYC::math::Matrix4x4::identity()); // 无效句柄
+  sw.drawMesh(lCYC::render::MeshHandle{999}, lCYC::math::Matrix4x4::identity());
   sw.endFrame();
   // 不应崩溃，帧缓冲仍为清屏背景色
   EXPECT_EQ(sw.pixel(0, 0), kClearColor);

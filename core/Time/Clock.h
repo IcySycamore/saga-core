@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @brief 引擎时钟
- * @namespace clockns
+ * @namespace lCYC::clock
  * @note update(steady_now) / addDuration(dur) 由外部注入
  * @note 只维护逻辑时间轴（tick/reg/alpha/scale）；真实时长由主循环维护
  * @note C++20
@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <ctime>
 
-namespace clockns {
+namespace lCYC::clock {
 
 class Clock {
 public:
@@ -86,4 +86,4 @@ private:
   std::chrono::time_point<std::chrono::steady_clock> m_mck_last; // 上一帧时间点
 };
 
-} // namespace clockns
+} // namespace lCYC::clock

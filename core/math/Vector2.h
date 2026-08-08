@@ -1,7 +1,7 @@
 #pragma once
 /**
  * @brief 二维向量
- * @namespace math
+ * @namespace lCYC::math
  * @note 内存布局: 2 × float = 8 字节
  * @note C++20，constexpr 优先，无 RTTI
  */
@@ -10,7 +10,7 @@
 #include <cmath>
 #include <string>
 
-namespace math {
+namespace lCYC::math {
 
 struct Vector2 {
   float x;
@@ -182,4 +182,4 @@ constexpr Vector2 operator*(float scalar, const Vector2 &v) {
   return v * scalar;
 }
 
-} // namespace math
+} // namespace lCYC::math

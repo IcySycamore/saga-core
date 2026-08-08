@@ -24,7 +24,7 @@
 - [ ] `dot(a,b)`（球面插值用）
 - [ ] `slerp(a, b, t)`（球面线性插值，处理最短路径 + 双倍角）
 - [ ] `lookRotation(forward, up)`（朝向，供 M7/Camera 用）
-- [ ] 命名空间 `math::`
+- [ ] 命名空间 `lCYC::math::`
 
 ## 性能
 
