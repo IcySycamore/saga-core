@@ -22,3 +22,7 @@ Thumbs.db
 
 # Test data (generated)
 test/*_generated.json
+
+# Agent runtime state (orchestrator workflow)
+.agent/memory/state.json
+.agent/reports/

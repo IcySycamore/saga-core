@@ -280,14 +280,19 @@ inline Matrix4x4 perspective(float fovY, float aspect, float near, float far) {
   return result;
 }
 
-/// 视图矩阵：lookAt（右手系，相机在 eye 看向 target）
-/// @note eye==target 或 up ∥ forward（万向锁）时返回单位矩阵（防御，不产生
-/// NaN）
+/**
+ * @brief 视图矩阵：lookAt
+ * @note eye == target 或 up // forward（万向锁）时返回单位矩阵
+ * @note 右手系
+ * @param m_eye 世界坐标系相机位置
+ * @param m_target 世界坐标系目标位置
+ * @param m_
+ */
 inline Matrix4x4 lookAt(const Vector3 &eye, const Vector3 &target,
                         const Vector3 &up) {
   const Vector3 f = normalized(target - eye); // forward
   if (lengthSquared(f) < EPSILON * EPSILON) {
-    return Matrix4x4::identity(); // eye==target：方向未定义，返回单位矩阵
+    return Matrix4x4::identity();
   }
 
   Vector3 s = cross(f, up); // right
