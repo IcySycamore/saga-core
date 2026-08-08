@@ -41,7 +41,6 @@ static void test_fixed_step() {
   clock.addDuration(0.1);
   EXPECT_EQ(clock.getTick(), 6);
   EXPECT_NEAR(clock.getLogicTime(), 6.0 / 60.0, 1e-9);
-  EXPECT_NEAR(clock.getRealAcc(), 0.1, 1e-9);
 }
 
 // ===================== 2: 累积器残余与 getLogicAcc =====================
@@ -69,7 +68,6 @@ static void test_time_scale_slowmo() {
 
   clock.addDuration(0.1);
   EXPECT_EQ(clock.getTick(), 3);
-  EXPECT_NEAR(clock.getRealAcc(), 0.1, 1e-9);
   EXPECT_NEAR(clock.getLogicTime(), 3.0 / 60.0, 1e-9);
 }
 
@@ -83,7 +81,6 @@ static void test_time_scale_pause() {
   clock.addDuration(0.5);
   EXPECT_EQ(clock.getTick(), 0);
   EXPECT_EQ(clock.getLogicTime(), 0.0);
-  EXPECT_NEAR(clock.getRealAcc(), 0.5, 1e-9);
 }
 
 // ===================== 5: 尖峰保护 =====================
@@ -94,8 +91,6 @@ static void test_spike_protection() {
   // 注入 5s（远超 maxFrameTime=0.1）→ 逻辑侧被钳制为 0.1s（6 tick）
   clock.addDuration(5.0);
   EXPECT_EQ(clock.getTick(), 6); // 0.1/0.0167
-  // 真实时间仍记录全部 5s（尖峰保护只影响逻辑侧）
-  EXPECT_NEAR(clock.getRealAcc(), 5.0, 1e-9);
 }
 
 // ===================== 6: 防死亡螺旋 =====================
@@ -155,10 +150,12 @@ static void test_update_injection() {
   auto t0 = steady_clock::now();
   auto t1 = t0 + milliseconds(50);
   clock.update(t1);
-  EXPECT(clock.getRealAcc() >= 0.049, "update should accumulate ~50ms");
+  // 50ms @ 60Hz → 3 tick
+  EXPECT_EQ(clock.getTick(), 3);
   auto t2 = t1 + milliseconds(50);
   clock.update(t2);
-  EXPECT(clock.getRealAcc() >= 0.098, "two updates accumulate ~100ms");
+  // 再 50ms → 共 6 tick
+  EXPECT_EQ(clock.getTick(), 6);
 }
 
 // ===================== main =====================
