@@ -19,6 +19,13 @@ if(Boost_FOUND)
     message(STATUS "Boost found: ${Boost_VERSION}")
 endif()
 
+# ===== 查找 SDL3（渲染窗口/输入，zlib 许可） =====
+set(SDL3_DIR C:/msys64/clang64/lib/cmake/SDL3 CACHE PATH "SDL3 cmake dir")
+find_package(SDL3 REQUIRED)
+if(SDL3_FOUND)
+    message(STATUS "SDL3 found: ${SDL3_VERSION}")
+endif()
+
 # ===== 核心库（头文件为主，少量 .cpp） =====
 set(CORE_SOURCES
     core/Entity/EntityManager.cpp
@@ -47,6 +54,10 @@ set(CORE_HEADERS
     core/math/TransformTools.h
     core/math/Vector2.h
     core/math/Vector3.h
+    core/render/Camera.h
+    core/render/RenderDevice.h
+    core/render/SDL3RenderDevice.h
+    core/render/SoftwareBackend.h
     core/Time/Clock.h
 )
 
@@ -109,6 +120,8 @@ add_test(NAME ItemTypeTest COMMAND test_item_type)
 add_test(NAME ItemSlotIntegrationTest COMMAND test_item_slot_integration)
 add_test(NAME MathTest COMMAND test_math)
 add_test(NAME TimeTest COMMAND test_time)
+add_test(NAME RandomTest COMMAND test_random)
+add_test(NAME RenderTest COMMAND test_render)
 
 add_executable(test_time
     test/test_time.cpp
@@ -119,3 +132,46 @@ target_include_directories(test_time PRIVATE
     ${Boost_INCLUDE_DIRS}
 )
 target_link_libraries(test_time PRIVATE Boost::json)
+
+add_executable(test_random
+    test/test_random.cpp
+)
+
+target_include_directories(test_random PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${Boost_INCLUDE_DIRS}
+)
+target_link_libraries(test_random PRIVATE Boost::json)
+
+add_executable(test_render
+    test/test_render.cpp
+)
+
+target_include_directories(test_render PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${Boost_INCLUDE_DIRS}
+)
+target_link_libraries(test_render PRIVATE Boost::json)
+
+# ===== DJ 工具（命令行音乐电台，播放音乐到虚拟麦克风） =====
+add_executable(dj
+    tools/dj/dj.cpp
+)
+target_include_directories(dj PRIVATE ${CMAKE_SOURCE_DIR}/tools/dj)
+
+if(WIN32)
+    # miniaudio(WASAPI backend) + CommandLineToArgvW
+    target_link_libraries(dj PRIVATE ole32 oleaut32 winmm user32 shell32)
+endif()
+
+# ===== 渲染演示（M1-M2：SDL3 窗口 + RenderDevice 抽象） =====
+add_executable(render_demo
+    tools/render_demo.cpp
+)
+target_include_directories(render_demo PRIVATE ${CMAKE_SOURCE_DIR})
+# SDL3 提供窗口/事件/渲染；若存在 SDL3main（WinMain 入口）则一并链接
+if(TARGET SDL3::SDL3main)
+    target_link_libraries(render_demo PRIVATE SDL3::SDL3main SDL3::SDL3)
+else()
+    target_link_libraries(render_demo PRIVATE SDL3::SDL3)
+endif()
