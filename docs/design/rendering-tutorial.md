@@ -914,17 +914,68 @@ class Camera {
 - **`Proj` 枚举在类外**（`render::Proj`）：避免嵌套枚举的 `Camera::Proj::Perspective` 冗长写法。
 - **正交投影的 aspect 修正**：正交范围固定 ±3 时，若屏幕不是正方形，画面会被拉伸变形。所以正交要**按 aspect 修正 x 范围**：`-3*aspect, 3*aspect, -3, 3`。这是第 4 讲"aspect 修正屏幕非方形"在正交下的具体实现（透视已由矩阵内修正，正交需要调用方手动传范围）。
 
-## 8.5 两个后端对比——同一接口，两种哲学
+## 8.5 三个后端对比——同一接口，三种实现
 
-|            | SDL3RenderDevice   | SoftwareBackend       |
-| ---------- | ------------------ | --------------------- |
-| 像素谁算   | SDL 渲染器（驱动） | 自己的 CPU 代码       |
-| 绘制方式   | 线框（线段）       | 实心三角形 + 深度     |
-| 是否含 SDL | 是（实现细节）     | 否（纯引擎层）        |
-| 帧缓冲     | SDL 内部管理       | 自己管理，可读可测    |
-| 用途       | 对照/简单调试      | 教学主体 + 确定性测试 |
+|            | SDL3RenderDevice     | SoftwareBackend      | OpenGLBackend        |
+| ---------- | -------------------- | -------------------- | -------------------- |
+| 像素谁算   | SDL 渲染器（驱动）   | 自己的 CPU 代码      | GPU（固定管线）      |
+| 绘制方式   | 线框（线段）         | 实心三角形 + 深度    | 实心三角形 + 深度    |
+| 是否含平台 | SDL（实现细节）      | 否（纯引擎层）       | SDL + OpenGL         |
+| 帧缓冲     | SDL 内部管理         | 自己管理，可读可测   | GPU 后缓冲           |
+| 用途       | 对照/简单调试        | 教学主体 + 确定性测试 | 实际显示/性能验证   |
 
-**同一个 `RenderDevice` 接口，应用层代码一字不改，切换后端只改一行**（`--backend software` 参数）。
+**同一个 `RenderDevice` 接口，应用层代码一字不改，切换后端只改命令行参数**（`--backend sdl3|software|opengl`）。这是抽象层的全部价值。
+
+## 8.6 OpenGL 后端：同一个接口换 GPU（M5）
+
+### 为什么 OpenGL 后端这么短
+
+对比：软光栅几百行（逐像素算），OpenGL 后端约 150 行。**GPU 把"逐像素"的活全包了**——顶点变换、光栅化、深度测试、近平面裁剪全是硬件/驱动干的。
+
+### 固定管线 vs 现代管线
+
+```cpp
+// 固定管线（本项目 MVP）：逐顶点发出，矩阵直传
+glMatrixMode(GL_MODELVIEW);
+glLoadMatrixf(mvp.data());          // 列主序直传
+ glBegin(GL_TRIANGLES);
+  glColor3f(v.color.x, v.color.y, v.color.z);
+  glVertex3f(v.pos.x, v.pos.y, v.pos.z);
+glEnd();
+```
+
+| 管线   | 顶点怎么给 | 矩阵怎么给 | 适合 |
+| ------ | ---------- | ---------- | ---- |
+| 固定管线 | 逐个 glVertex3f | glLoadMatrixf | 教学/最小 MVP |
+| 现代管线 | VAO/VBO 批量上传 | 着色器 uniform（uMVP） | 生产 |
+
+**列主序直传**：`Matrix4x4` 存储是列主序 `m[col*4+row]`，与 OpenGL 矩阵内存布局完全一致 → `glLoadMatrixf(mvp.data())` 直接传，无需转置。这是当初定矩阵约定的红利。
+
+### GPU 免费送的三件事（对照软光栅的劳作）
+
+| 能力 | 软光栅（手写） | OpenGL（一行） |
+| ---- | -------------- | -------------- |
+| 深度测试 | 深度缓冲 + setPixel 比较 | `glEnable(GL_DEPTH_TEST)` |
+| 透视除法 | transformVertex 手算 w | 硬件自动 |
+| 近平面裁剪 | invalid 丢弃（简化） | **完整裁剪**（跨近平面的三角形被正确切开） |
+
+特别是**近平面裁剪**：软光栅是"w≤0 丢弃"的简化版（画面边缘会缺角），OpenGL 是完整裁剪——这正是软光栅里留作后续的作业，GPU 免费给你。
+
+### 双后端画面一致怎么验证（M5 验收）
+
+```bash
+render_demo.exe --backend software --screenshot sw.bmp
+render_demo.exe --backend opengl   --screenshot gl.bmp
+```
+
+然后逐像素统计对比：背景色数量一致、静止立方体同一颜色面像素数完全一致、无异常色块。本项目实测：静止立方体橙色面两后端像素数**完全相同**（11312），背景差 <0.01%。
+
+### OpenGL 后端的窗口细节
+
+- 窗口必须带 `SDL_WINDOW_OPENGL` 标志（才能创建 GL 上下文）
+- `SDL_GL_CreateContext` 创建上下文 + `SDL_GL_SetSwapInterval(1)` 开垂直同步
+- 截图用 `glReadPixels` 读**后缓冲**，必须在 swap（present）之前调用
+- 颜色：`glClearColor(24/255, 32/255, 48/255, 1)` 与软光栅清屏色严格一致 → 画面一致的前提
 
 ---
 
@@ -1171,7 +1222,9 @@ cmake --build build/vscodeBuild --target render_demo test_render
 # 运行
 .\build\vscodeBuild\render_demo.exe                    # SDL3 线框后端
 .\build\vscodeBuild\render_demo.exe --backend software # 软光栅后端
+.\build\vscodeBuild\render_demo.exe --backend opengl   # OpenGL GPU 后端
 .\build\vscodeBuild\render_demo.exe --backend software --screenshot out.bmp  # 截图模式
+.\build\vscodeBuild\render_demo.exe --backend opengl --screenshot out.bmp    # OpenGL 截图
 .\build\vscodeBuild\test_render.exe                    # 软光栅单测（8 断言）
 
 # 操作
@@ -1236,4 +1289,4 @@ flowchart LR
 
 ---
 
-_后续：M5 OpenGL 后端（同一 RenderDevice 接口）、M6 RenderServer + Engine 组装、未来 RenderDevice 分层为 Command/Immediate 两代接口。_
+_后续：M6 RenderServer + Engine 组装、RenderDevice 分层为 Command/Immediate 两代接口、OpenGL 后端升级现代管线（VAO/VBO + shader）。_

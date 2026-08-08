@@ -22,6 +22,7 @@
 
 #include "core/Time/Clock.h"
 #include "core/render/Camera.h"
+#include "core/render/OpenGLBackend.h"
 #include "core/render/RenderDevice.h"
 #include "core/render/SDL3RenderDevice.h"
 #include "core/render/SoftwareBackend.h"
@@ -161,17 +162,28 @@ static bool swSaveBMP(const render::SoftwareBackend *sw, const char *path) {
 }
 
 int main(int argc, char *argv[]) {
-  // 可选参数：--backend software（用软光栅）/ --screenshot <path>
+  // 后端枚举：sdl3（线框，默认）/ software（软光栅）/ opengl（GPU）
+  enum class Backend { Sdl3, Software, OpenGL };
+  // 可选参数：--backend <sdl3|software|opengl> / --screenshot <path>
   const char *shotPath = nullptr;
-  bool useSoftware = false;
+  Backend backend = Backend::Sdl3;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc) {
       shotPath = argv[i + 1];
     }
     if (std::strcmp(argv[i], "--backend") == 0 && i + 1 < argc) {
-      useSoftware = (std::strcmp(argv[i + 1], "software") == 0);
+      const char *b = argv[i + 1];
+      if (std::strcmp(b, "software") == 0) {
+        backend = Backend::Software;
+      } else if (std::strcmp(b, "opengl") == 0) {
+        backend = Backend::OpenGL;
+      } else {
+        backend = Backend::Sdl3;
+      }
     }
   }
+  const bool useSoftware = (backend == Backend::Software);
+  const bool useOpenGL = (backend == Backend::OpenGL);
 
   const int width = 1280;
   const int height = 720;
@@ -184,8 +196,10 @@ int main(int argc, char *argv[]) {
 
   // ---- 创建窗口（容器/屏幕）----
   // SDL3: SDL_CreateWindow(title, w, h, flags)——位置由属性控制，默认居中
-  SDL_Window *window =
-      SDL_CreateWindow("Saga Render Demo", width, height, SDL_WINDOW_RESIZABLE);
+  // OpenGL 后端需要窗口带 SDL_WINDOW_OPENGL 标志（创建 GL 上下文）
+  SDL_Window *window = SDL_CreateWindow(
+      "Saga Render Demo", width, height,
+      SDL_WINDOW_RESIZABLE | (useOpenGL ? SDL_WINDOW_OPENGL : 0));
   if (!window) {
     std::fprintf(stderr, "SDL_CreateWindow 失败: %s\n", SDL_GetError());
     SDL_Quit();
@@ -198,18 +212,19 @@ int main(int argc, char *argv[]) {
   render::NativeWindowHandle<SDL_Window> handle;
   handle.native = window;
 
-  // SDL 渲染器（两种后端都需要：软件后端用它显示帧缓冲纹理）
-  SDL_Renderer *sdlRenderer = SDL_CreateRenderer(window, nullptr);
-  if (!sdlRenderer) {
-    std::fprintf(stderr, "SDL_CreateRenderer 失败: %s\n", SDL_GetError());
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-    return 1;
-  }
-
-  // 软件后端的显示纹理（RGBA8888 帧缓冲 → GPU 纹理）
+  // SDL 渲染器（仅软光栅需要：用它显示帧缓冲纹理；SDL3 后端自建渲染器，
+  // OpenGL 后端用 GL 上下文）
+  SDL_Renderer *sdlRenderer = nullptr;
   SDL_Texture *fbTexture = nullptr;
   if (useSoftware) {
+    sdlRenderer = SDL_CreateRenderer(window, nullptr);
+    if (!sdlRenderer) {
+      std::fprintf(stderr, "SDL_CreateRenderer 失败: %s\n", SDL_GetError());
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return 1;
+    }
+    // 软光栅的显示纹理（RGBA8888 帧缓冲 → 纹理）
     fbTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_RGBA32,
                                   SDL_TEXTUREACCESS_STREAMING, width, height);
     if (!fbTexture) {
@@ -224,9 +239,13 @@ int main(int argc, char *argv[]) {
   render::RenderDevice *device = nullptr;
   render::SDL3RenderDevice sdlDevice;
   render::SoftwareBackend swDevice;
+  render::OpenGLBackend glDevice;
   if (useSoftware) {
     swDevice.init({}, width, height); // 软光栅无需窗口句柄
     device = &swDevice;
+  } else if (useOpenGL) {
+    glDevice.init(handle, width, height); // GPU 后端（需 SDL_WINDOW_OPENGL 窗口）
+    device = &glDevice;
   } else {
     sdlDevice.init(handle, width, height);
     device = &sdlDevice;
@@ -240,21 +259,27 @@ int main(int argc, char *argv[]) {
   // 屏幕宽高比（渲染分辨率固定 1280x720，因此宽高比恒定）
   const float aspect = static_cast<float>(width) / static_cast<float>(height);
 
-  // ---- 场景内容（M4）----
-  // 旋转立方体：SDL3 后端用线框，软光栅用实心三角形
+  // ---- 场景内容（M4/M5）----
+  // 实心模式：软光栅/OpenGL（GPU 深度测试）都用实心三角形 → 双后端画面一致
+  // 线框模式：SDL3 线框后端
+  const bool solidMesh = (backend != Backend::Sdl3);
+  // 旋转立方体
   const render::MeshHandle rotatingCube =
-      useSoftware ? device->createMesh(makeCubeSolid(0.8f, {0.9f, 0.9f, 0.9f}))
-                  : device->createMesh(makeCubeEdges(0.8f, {0.9f, 0.9f, 0.9f}));
+      solidMesh
+          ? device->createMesh(makeCubeSolid(0.8f, {0.9f, 0.9f, 0.9f}))
+          : device->createMesh(makeCubeEdges(0.8f, {0.9f, 0.9f, 0.9f}));
   // 静止立方体（橙色，偏移到右侧，用于对比遮挡）
   const render::MeshHandle staticCube =
-      useSoftware ? device->createMesh(makeCubeSolid(0.5f, {1.0f, 0.6f, 0.2f}))
-                  : device->createMesh(makeCubeEdges(0.5f, {1.0f, 0.6f, 0.2f}));
+      solidMesh
+          ? device->createMesh(makeCubeSolid(0.5f, {1.0f, 0.6f, 0.2f}))
+          : device->createMesh(makeCubeEdges(0.5f, {1.0f, 0.6f, 0.2f}));
 
   // 逻辑时钟（固定步长，驱动动画）
   clockns::Clock clock;
 
   std::printf("窗口已创建: %dx%d，后端=%s 就绪\n", width, height,
-              useSoftware ? "Software(软光栅)" : "SDL3");
+              useOpenGL ? "OpenGL(GPU)"
+                        : (useSoftware ? "Software(软光栅)" : "SDL3(线框)"));
   std::printf("（P 键切换透视/正交，关闭窗口退出）\n");
 
   // ---- 主循环：处理事件直到用户关窗 ----
@@ -311,7 +336,7 @@ int main(int argc, char *argv[]) {
 
     device->endFrame();
 
-    // 显示：SDL3 后端直接 present；软光栅把帧缓冲上传到纹理再画
+    // 显示：SDL3/OpenGL 后端已在 endFrame 内 present；软光栅把帧缓冲上传到纹理再画
     if (useSoftware) {
       const auto sw = static_cast<render::SoftwareBackend *>(device);
       /* 关键：用当前帧缓冲尺寸拷贝（resize 后帧缓冲/纹理已重建为
@@ -348,11 +373,19 @@ int main(int argc, char *argv[]) {
     }
 
     // 截图模式：N 帧后保存并退出
+    // 注意：须在 endFrame/swap 之前读像素（OpenGL 后缓冲 swap 后未定义）
     if (!shotSaved && ++frame >= 3) {
       if (useSoftware) {
         // 软光栅：帧缓冲直接存 BMP
         const auto sw = static_cast<render::SoftwareBackend *>(device);
         if (swSaveBMP(sw, shotPath)) {
+          std::printf("截图已保存: %s\n", shotPath);
+        } else {
+          std::fprintf(stderr, "截图失败\n");
+        }
+      } else if (useOpenGL) {
+        // OpenGL：glReadPixels 读后缓冲存 BMP
+        if (glDevice.saveScreenshot(shotPath)) {
           std::printf("截图已保存: %s\n", shotPath);
         } else {
           std::fprintf(stderr, "截图失败\n");
@@ -374,7 +407,9 @@ int main(int argc, char *argv[]) {
   if (fbTexture) {
     SDL_DestroyTexture(fbTexture);
   }
-  SDL_DestroyRenderer(sdlRenderer);
+  if (sdlRenderer) {
+    SDL_DestroyRenderer(sdlRenderer);
+  }
   SDL_DestroyWindow(window);
   SDL_Quit();
   std::printf("窗口已关闭，正常退出\n");
