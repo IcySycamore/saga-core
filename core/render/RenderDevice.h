@@ -8,7 +8,6 @@
  *   - 性能：mesh 上传一次，绘制引用句柄
  *   - 所有权：device 由外部拥有，本接口不管理生命周期
  *   - 安全：span/句柄
- *   - 编译：C++20
  */
 
 #include "core/math/Matrix4x4.h"

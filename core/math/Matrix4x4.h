@@ -1,10 +1,8 @@
 #pragma once
 /**
- * @brief 四阶矩阵（模型/视图/投影变换 + 齐次坐标）
+ * @brief 四阶矩阵
  * @namespace lCYC::math
  * @note 存储约定: 列主序 column-major，m[col * 4 + row]
- * @note 矩阵乘语义: A * B = "先应用 B 再应用 A"（列向量约定 v' = M * v）
- * @note C++20，constexpr 优先，无 RTTI
  */
 
 #include "Math.h"
@@ -130,7 +128,7 @@ struct Matrix4x4 {
     return det;
   }
 
-  /// 逆。不可逆（det≈0）防御：返回单位矩阵
+  /// 逆。不可逆返回单位矩阵
   constexpr Matrix4x4 inverse() const {
     const float det = determinant();
     const float absDet = det < 0.0f ? -det : det;
@@ -215,7 +213,7 @@ struct Matrix4x4 {
 
 // ============================ 自由函数 ============================
 
-/// 平移矩阵（列主序：平移在最后一列 m[12..14]）
+/// 平移矩阵
 constexpr Matrix4x4 translation(const Vector3 &t) {
   Matrix4x4 result;
   result.at(0, 3) = t.x;
@@ -282,7 +280,7 @@ inline Matrix4x4 perspective(float fovY, float aspect, float near, float far) {
 
 /**
  * @brief 视图矩阵：lookAt
- * @note eye == target 或 up // forward（万向锁）时返回单位矩阵
+ * @note eye == target 或 up // forward 时返回单位矩阵
  * @note 右手系
  * @param m_eye 世界坐标系相机位置
  * @param m_target 世界坐标系目标位置
@@ -297,7 +295,7 @@ inline Matrix4x4 lookAt(const Vector3 &eye, const Vector3 &target,
 
   Vector3 s = cross(f, up); // right
   if (lengthSquared(s) < EPSILON * EPSILON) {
-    // up ∥ forward（万向锁）→ 用世界 up 重算
+    // up ∥ forward up 重算
     const Vector3 ref =
         (std::abs(f.y) < 1.0f - EPSILON) ? Vector3::up() : Vector3::right();
     s = cross(f, ref);

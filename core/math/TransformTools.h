@@ -1,12 +1,9 @@
 #pragma once
 /**
- * @brief 组合工具（TRS/欧拉互转/变换封装）
+ * @brief 组合工具
  * @namespace lCYC::math
- * @note 应用层入口：供 ECS Transform、Camera、场景图直接消费
- * @note 欧拉顺序约定: 标准 ZYX（应用顺序先绕 X 再绕 Y 再绕 Z），全库统一
- *       与 Quaternion::euler 一致（q = qz·qy·qx）
- * @note C++20，constexpr 优先，无 RTTI
- * @note 规格: docs/math/M7-transform-tools.md
+ * @note 应用层入口：供 ECS Transform、Camera、场景图消费
+ * @note 欧拉顺序约定: 应用X 再 Y 再 Z
  */
 
 #include "Math.h"
@@ -117,6 +114,50 @@ inline bool decomposeTRS(const Matrix4x4 &m, Vector3 &pos, Quaternion &rot,
   return true;
 }
 
+// ============================ 矩阵互转 ============================
+// 3x3/4x4/四元数之间的转换，从 Matrix3x3 迁入（组合层职责）
+
+/// 法线矩阵（= 逆转置，用于非均匀缩放下的法线变换）
+/// @param m 变换矩阵（仅取左上 3x3 的旋转/缩放部分）
+inline Matrix3x3 normalMatrix(const Matrix3x3 &m) {
+  return m.inverse().transposed();
+}
+
+/// 从 4x4 提取 3x3（去平移，取左上 3x3）
+constexpr Matrix3x3 fromMatrix4x4(const Matrix4x4 &m4) {
+  Matrix3x3 result;
+  result.at(0, 0) = m4.at(0, 0);
+  result.at(1, 0) = m4.at(1, 0);
+  result.at(2, 0) = m4.at(2, 0);
+  result.at(0, 1) = m4.at(0, 1);
+  result.at(1, 1) = m4.at(1, 1);
+  result.at(2, 1) = m4.at(2, 1);
+  result.at(0, 2) = m4.at(0, 2);
+  result.at(1, 2) = m4.at(1, 2);
+  result.at(2, 2) = m4.at(2, 2);
+  return result;
+}
+
+/// 3x3 扩展为 4x4（右下角 1，无平移）
+constexpr Matrix4x4 toMatrix4x4(const Matrix3x3 &m) {
+  Matrix4x4 result;
+  result.at(0, 0) = m.at(0, 0);
+  result.at(1, 0) = m.at(1, 0);
+  result.at(2, 0) = m.at(2, 0);
+  result.at(0, 1) = m.at(0, 1);
+  result.at(1, 1) = m.at(1, 1);
+  result.at(2, 1) = m.at(2, 1);
+  result.at(0, 2) = m.at(0, 2);
+  result.at(1, 2) = m.at(1, 2);
+  result.at(2, 2) = m.at(2, 2);
+  return result;
+}
+
+/// 四元数 → 3x3 旋转矩阵
+inline Matrix3x3 rotation3x3(const Quaternion &q) {
+  return fromMatrix4x4(lCYC::math::rotation(q));
+}
+
 // ============================ 欧拉角互转 ============================
 // 顺序约定: 标准 ZYX（应用顺序先绕 X 再绕 Y 再绕 Z）——与 Quaternion::euler 一致
 
@@ -164,7 +205,7 @@ inline Matrix4x4 eulerToMatrix(const Vector3 &eulerAngles) {
 
 /// 从 4x4 提取欧拉角（经四元数中转）
 inline Vector3 matrixToEuler(const Matrix4x4 &m) {
-  Matrix3x3 r3 = Matrix3x3::fromMatrix4x4(m);
+  Matrix3x3 r3 = fromMatrix4x4(m);
   // 3x3 → 四元数（复用 decompose 的 Shepperd 逻辑）
   Vector3 pos, scale;
   Quaternion rot;

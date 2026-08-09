@@ -1,10 +1,9 @@
 #pragma once
 /**
- * @brief 四元数（旋转）
+ * @brief 四元数
  * @namespace lCYC::math
  * @note 内存布局: 4 × float = 16 字节
  * @note 避免欧拉角万向锁；用于实体朝向、相机旋转、插值旋转
- * @note C++20，constexpr 优先，无 RTTI
  */
 
 #include "Math.h"

@@ -6,9 +6,6 @@
  */
 
 #include "Math.h"
-#include "Matrix4x4.h"
-#include "Quaternion.h"
-#include "Vector2.h"
 #include "Vector3.h"
 #include <cassert>
 #include <cmath>
@@ -34,7 +31,6 @@ struct Matrix3x3 {
   static constexpr Matrix3x3 identity() { return Matrix3x3(); }
 
   // ============================ 索引访问 ============================
-  // 列主序: 元素 (row, col) → m[col * 3 + row]
 
   constexpr float &at(int row, int col) {
     assert(row >= 0 && row < 3 && col >= 0 && col < 3 &&
@@ -91,7 +87,7 @@ struct Matrix3x3 {
     return !(*this == rhs);
   }
 
-  // ============================ 基础运算 ============================
+  // ============================ 操作 ============================
 
   /// 转置
   constexpr Matrix3x3 transposed() const {
@@ -111,7 +107,7 @@ struct Matrix3x3 {
            m[6] * (m[1] * m[5] - m[2] * m[4]);
   }
 
-  /// 逆。不可逆（det≈0）防御：返回单位矩阵
+  /// 逆。不可逆返回单位矩阵
   Matrix3x3 inverse() const {
     const float det = determinant();
     if (std::abs(det) < EPSILON) {
@@ -130,44 +126,18 @@ struct Matrix3x3 {
     result.at(2, 2) = (m[0] * m[4] - m[1] * m[3]) * invDet;
     return result;
   }
-
-  /// 法线矩阵（= 逆转置，用于非均匀缩放下的法线变换）
-  Matrix3x3 normalMatrix() const { return inverse().transposed(); }
-
-  // ============================ 转换 ============================
-
-  /// 从 4x4 提取 3x3（去平移，取左上 3x3）
-  constexpr static Matrix3x3 fromMatrix4x4(const Matrix4x4 &m4) {
-    Matrix3x3 result;
-    result.at(0, 0) = m4.at(0, 0);
-    result.at(1, 0) = m4.at(1, 0);
-    result.at(2, 0) = m4.at(2, 0);
-    result.at(0, 1) = m4.at(0, 1);
-    result.at(1, 1) = m4.at(1, 1);
-    result.at(2, 1) = m4.at(2, 1);
-    result.at(0, 2) = m4.at(0, 2);
-    result.at(1, 2) = m4.at(1, 2);
-    result.at(2, 2) = m4.at(2, 2);
-    return result;
-  }
-
-  /// 扩展为 4x4（右下角 1，无平移）
-  constexpr Matrix4x4 toMatrix4x4() const {
-    Matrix4x4 result;
-    result.at(0, 0) = at(0, 0);
-    result.at(1, 0) = at(1, 0);
-    result.at(2, 0) = at(2, 0);
-    result.at(0, 1) = at(0, 1);
-    result.at(1, 1) = at(1, 1);
-    result.at(2, 1) = at(2, 1);
-    result.at(0, 2) = at(0, 2);
-    result.at(1, 2) = at(1, 2);
-    result.at(2, 2) = at(2, 2);
-    return result;
-  }
 };
 
-// ============================ 自由函数 ============================
+/// 三维向量规格化到三维矩阵
+constexpr Matrix3x3 scale3x3(const Vector3 &s) {
+  Matrix3x3 result;
+  result.at(0, 0) = s.x;
+  result.at(1, 1) = s.y;
+  result.at(2, 2) = s.z;
+  return result;
+}
+
+// ============================ 矩阵创建 ============================
 
 /**
  * @brief 创建绕x轴的 旋转矩阵
@@ -181,8 +151,8 @@ constexpr Matrix3x3 rotationX(float angleRad) {
   const float c = std::cos(angleRad);
   const float s = std::sin(angleRad);
   result.at(1, 1) = c;
-  result.at(2, 1) = s;  // 列1 (up) 的 z 分量 = sinθ
-  result.at(1, 2) = -s; // 列2 (forward) 的 y 分量 = -sinθ
+  result.at(2, 1) = s;
+  result.at(1, 2) = -s;
   result.at(2, 2) = c;
   return result;
 }
@@ -199,8 +169,8 @@ constexpr Matrix3x3 rotationY(float angleRad) {
   const float c = std::cos(angleRad);
   const float s = std::sin(angleRad);
   result.at(0, 0) = c;
-  result.at(2, 0) = -s; // 列0 (right) 的 z 分量 = -sinθ
-  result.at(0, 2) = s;  // 列2 (forward) 的 x 分量 = sinθ
+  result.at(2, 0) = -s;
+  result.at(0, 2) = s;
   result.at(2, 2) = c;
   return result;
 }
@@ -210,11 +180,11 @@ constexpr Matrix3x3 rotationY(float angleRad) {
  *
  * @param angleRad 从x正半轴逆时针旋转弧度
  * @return constexpr Matrix3x3
- * @details 在 xy 平面旋转（标准逆时针，右手系，行列式 +1）
+ * @details 在 xy 平面旋转 右手系
  *  原向量 (x,y) = (Lcosα, Lsinα)，逆时针旋转 θ 后：
  *  x' = L·cos(α+θ) = L(cosα·cosθ − sinα·sinθ) = x·cosθ − y·sinθ
  *  y' = L·sin(α+θ) = L(sinα·cosθ + cosα·sinθ) = x·sinθ + y·cosθ
- *  矩阵（列向量约定 v' = M·v）：
+ *  矩阵：
  *  [ cosθ  −sinθ ]
  *  [ sinθ   cosθ ]
  */
@@ -223,38 +193,23 @@ constexpr Matrix3x3 rotationZ(float angleRad) {
   const float c = std::cos(angleRad);
   const float s = std::sin(angleRad);
   result.at(0, 0) = c;
-  result.at(1, 0) = s;  // 列0 (right) 的 y 分量 = sinθ
-  result.at(0, 1) = -s; // 列1 (up) 的 x 分量 = -sinθ
+  result.at(1, 0) = s;
+  result.at(0, 1) = -s;
   result.at(1, 1) = c;
   return result;
 }
 
-/// 由四元数构造 3x3 旋转矩阵
-inline Matrix3x3 rotation3x3(const Quaternion &q) {
-  return Matrix3x3::fromMatrix4x4(lCYC::math::rotation(q));
-}
-
-/// 3x3 缩放矩阵，三维向量规格化到三维矩阵
-constexpr Matrix3x3 scale3x3(const Vector3 &s) {
-  Matrix3x3 result;
-  result.at(0, 0) = s.x;
-  result.at(1, 1) = s.y;
-  result.at(2, 2) = s.z;
-  return result;
-}
 /**
- * @brief 创建2D旋转矩阵
+ * @brief 创建2D 旋转矩阵
  *
  * @param angleRad 从x正半轴逆时针旋转角度
  * @return constexpr Matrix3x3
- * @details 2D 平面旋转 = 3D 绕 Z 轴旋转限制在 xy 平面（w 分量不变），
- *  直接复用 rotationZ。推导见 rotationZ：
- *  x' = x·cosθ − y·sinθ，y' = x·sinθ + y·cosθ（行列式 +1，非镜像）
+ * @details 2D 平面旋转 直接复用 rotationZ。推导见 rotationZ
  */
 constexpr Matrix3x3 rotation2D(float angleRad) { return rotationZ(angleRad); }
 
 /**
- * @brief 创建2D平移矩阵
+ * @brief 创建2D 平移矩阵
  *
  * @param x x方向平移浮点量
  * @param y y方向平移浮点量

@@ -13,7 +13,6 @@
  *   - 生命周期：GL 上下文由本类创建/销毁；窗口由外部拥有
  * @note 依赖: SDL3（窗口/GL 上下文）+ opengl32（Windows 提供 GL 1.1 核心函数）
  * @note 像素格式：帧缓冲 GL_RGBA 内存序（R 最低字节），与软光栅一致
- * @note C++20
  */
 
 #include "core/render/RenderDevice.h"

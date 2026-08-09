@@ -55,8 +55,10 @@ static void test_angle_conversion() {
   EXPECT_NEAR(lCYC::math::rad2deg(lCYC::math::PI), 180.0, 1e-12);
   EXPECT_NEAR(lCYC::math::rad2deg(lCYC::math::HALF_PI), 90.0, 1e-12);
   // float 版本
-  EXPECT_NEAR(lCYC::math::deg2rad(180.0f), static_cast<float>(lCYC::math::PI), 1e-6f);
-  EXPECT_NEAR(lCYC::math::rad2deg(static_cast<float>(lCYC::math::PI)), 180.0f, 1e-4f);
+  EXPECT_NEAR(lCYC::math::deg2rad(180.0f), static_cast<float>(lCYC::math::PI),
+              1e-6f);
+  EXPECT_NEAR(lCYC::math::rad2deg(static_cast<float>(lCYC::math::PI)), 180.0f,
+              1e-4f);
   // constexpr 编译期求值
   constexpr double half = lCYC::math::deg2rad(90.0);
   static_assert(half == lCYC::math::HALF_PI, "deg2rad should be constexpr");
@@ -91,7 +93,8 @@ static void test_lerp() {
 static void test_misc_tools() {
   TEST("M1_misc_tools");
 
-  EXPECT(lCYC::math::approxEqual(1.0f, 1.0f + 1e-7f), "within eps should be equal");
+  EXPECT(lCYC::math::approxEqual(1.0f, 1.0f + 1e-7f),
+         "within eps should be equal");
   EXPECT(!lCYC::math::approxEqual(1.0f, 1.1f), "beyond eps should differ");
   EXPECT(lCYC::math::approxEqual(0.1 + 0.2, 0.3, 1e-9), "double approx");
   // double 默认容差 1e-12（比 float 的 1e-6 严格）
@@ -106,9 +109,12 @@ static void test_misc_tools() {
   EXPECT_EQ(lCYC::math::smoothstep(0.0f, 1.0f, 1.0f), 1.0f);  // x >= edge1 → 1
   EXPECT_EQ(lCYC::math::smoothstep(0.0f, 1.0f, -5.0f), 0.0f); // 区间外钳制
   EXPECT_EQ(lCYC::math::smoothstep(0.0f, 1.0f, 5.0f), 1.0f);
-  EXPECT_NEAR(lCYC::math::smoothstep(0.0f, 1.0f, 0.5f), 0.5f, 1e-6f);     // 中点对称
-  EXPECT_NEAR(lCYC::math::smoothstep(2.0f, 4.0f, 3.0f), 0.5f, 1e-6f);     // 中点=1/2
-  EXPECT_NEAR(lCYC::math::smoothstep(2.0f, 4.0f, 3.5f), 0.84375f, 1e-5f); // t=0.75
+  EXPECT_NEAR(lCYC::math::smoothstep(0.0f, 1.0f, 0.5f), 0.5f,
+              1e-6f); // 中点对称
+  EXPECT_NEAR(lCYC::math::smoothstep(2.0f, 4.0f, 3.0f), 0.5f,
+              1e-6f); // 中点=1/2
+  EXPECT_NEAR(lCYC::math::smoothstep(2.0f, 4.0f, 3.5f), 0.84375f,
+              1e-5f); // t=0.75
   // 双精度版
   EXPECT_NEAR(lCYC::math::smoothstep(0.0, 1.0, 0.5), 0.5, 1e-12);
   // constexpr 编译期求值
@@ -201,7 +207,8 @@ static void test_vector3_dot_cross() {
 
   EXPECT_EQ(lCYC::math::dot(a, b), 0.0f); // 正交
   EXPECT_EQ(lCYC::math::dot(a, a), 1.0f); // 单位向量自点积
-  EXPECT_EQ(lCYC::math::dot(lCYC::math::Vector3(1, 2, 3), lCYC::math::Vector3(4, 5, 6)),
+  EXPECT_EQ(lCYC::math::dot(lCYC::math::Vector3(1, 2, 3),
+                            lCYC::math::Vector3(4, 5, 6)),
             32.0f); // 1*4+2*5+3*6
 
   auto cr = lCYC::math::cross(a, b);
@@ -254,7 +261,8 @@ static void test_vector3_normalize() {
   EXPECT_NEAR(v2.z, 1.0f, 1e-6f);
 
   // 已单位向量归一化不改变
-  lCYC::math::Vector3 unit = lCYC::math::normalized(lCYC::math::Vector3(1.0f, 0.0f, 0.0f));
+  lCYC::math::Vector3 unit =
+      lCYC::math::normalized(lCYC::math::Vector3(1.0f, 0.0f, 0.0f));
   EXPECT_NEAR(unit.x, 1.0f, 1e-6f);
 }
 
@@ -279,7 +287,8 @@ static void test_vector3_misc() {
   // （负 maxLen 触发 assert 防护，debug 下不测）
 
   // 分量逐乘（Hadamard）
-  auto h = lCYC::math::Vector3(2.0f, 3.0f, 4.0f) * lCYC::math::Vector3(5.0f, 6.0f, 7.0f);
+  auto h = lCYC::math::Vector3(2.0f, 3.0f, 4.0f) *
+           lCYC::math::Vector3(5.0f, 6.0f, 7.0f);
   EXPECT_EQ(h.x, 10.0f);
   EXPECT_EQ(h.y, 18.0f);
   EXPECT_EQ(h.z, 28.0f);
@@ -289,7 +298,8 @@ static void test_vector3_misc() {
   lCYC::math::Vector3 b(0.0f, 1.0f, 0.0f);
   EXPECT_NEAR(lCYC::math::angle(a, b), lCYC::math::HALF_PI, 1e-6f);
   EXPECT_EQ(lCYC::math::angle(a, a), 0.0f);
-  EXPECT_EQ(lCYC::math::angle(a, lCYC::math::Vector3::zero()), 0.0f); // 零向量安全
+  EXPECT_EQ(lCYC::math::angle(a, lCYC::math::Vector3::zero()),
+            0.0f); // 零向量安全
 
   // reflect
   lCYC::math::Vector3 dir(1.0f, -1.0f, 0.0f);
@@ -359,9 +369,11 @@ static void test_vector2_ops() {
   EXPECT_EQ(lCYC::math::dot(a, b), 11.0f); // 1*3 + 2*4
 
   // 2D cross（标量）
-  EXPECT_EQ(lCYC::math::cross(lCYC::math::Vector2(1.0f, 0.0f), lCYC::math::Vector2(0.0f, 1.0f)),
+  EXPECT_EQ(lCYC::math::cross(lCYC::math::Vector2(1.0f, 0.0f),
+                              lCYC::math::Vector2(0.0f, 1.0f)),
             1.0f);
-  EXPECT_EQ(lCYC::math::cross(lCYC::math::Vector2(0.0f, 1.0f), lCYC::math::Vector2(1.0f, 0.0f)),
+  EXPECT_EQ(lCYC::math::cross(lCYC::math::Vector2(0.0f, 1.0f),
+                              lCYC::math::Vector2(1.0f, 0.0f)),
             -1.0f);
 
   // perp
@@ -371,9 +383,9 @@ static void test_vector2_ops() {
 
   // length
   EXPECT_EQ(lCYC::math::length(lCYC::math::Vector2(3.0f, 4.0f)), 5.0f);
-  EXPECT_EQ(
-      lCYC::math::distance(lCYC::math::Vector2(0.0f, 0.0f), lCYC::math::Vector2(3.0f, 4.0f)),
-      5.0f);
+  EXPECT_EQ(lCYC::math::distance(lCYC::math::Vector2(0.0f, 0.0f),
+                                 lCYC::math::Vector2(3.0f, 4.0f)),
+            5.0f);
 
   // normalize
   auto n = lCYC::math::normalized(lCYC::math::Vector2(0.0f, 10.0f));
@@ -386,12 +398,14 @@ static void test_vector2_rotate() {
   TEST("M3_Vector2_rotate");
 
   // 绕原点逆时针旋转 90°
-  auto r90 = lCYC::math::rotate(lCYC::math::Vector2(1.0f, 0.0f), lCYC::math::HALF_PI);
+  auto r90 =
+      lCYC::math::rotate(lCYC::math::Vector2(1.0f, 0.0f), lCYC::math::HALF_PI);
   EXPECT_NEAR(r90.x, 0.0f, 1e-5f);
   EXPECT_NEAR(r90.y, 1.0f, 1e-5f);
 
   // 旋转 180°
-  auto r180 = lCYC::math::rotate(lCYC::math::Vector2(1.0f, 0.0f), lCYC::math::PI);
+  auto r180 =
+      lCYC::math::rotate(lCYC::math::Vector2(1.0f, 0.0f), lCYC::math::PI);
   EXPECT_NEAR(r180.x, -1.0f, 1e-5f);
   EXPECT_NEAR(r180.y, 0.0f, 1e-5f);
 
@@ -399,7 +413,8 @@ static void test_vector2_rotate() {
   EXPECT_NEAR(lCYC::math::length(r180), 1.0f, 1e-5f);
 
   // angle
-  EXPECT_NEAR(lCYC::math::angle(lCYC::math::Vector2(1.0f, 0.0f), lCYC::math::Vector2(0.0f, 1.0f)),
+  EXPECT_NEAR(lCYC::math::angle(lCYC::math::Vector2(1.0f, 0.0f),
+                                lCYC::math::Vector2(0.0f, 1.0f)),
               lCYC::math::HALF_PI, 1e-6f);
 }
 
@@ -425,14 +440,16 @@ static void test_quaternion_axis_angle() {
   TEST("M4_axisAngle");
 
   // 绕 Z 轴旋转 90°
-  auto q = lCYC::math::axisAngle(lCYC::math::Vector3::forward(), lCYC::math::HALF_PI);
+  auto q = lCYC::math::axisAngle(lCYC::math::Vector3::forward(),
+                                 lCYC::math::HALF_PI);
   auto v = q * lCYC::math::Vector3::right();
   EXPECT_NEAR(v.x, 0.0f, 1e-5f);
   EXPECT_NEAR(v.y, 1.0f, 1e-5f);
   EXPECT_NEAR(v.z, 0.0f, 1e-5f);
 
   // 绕 Z 轴旋转 180°
-  auto q180 = lCYC::math::axisAngle(lCYC::math::Vector3::forward(), lCYC::math::PI);
+  auto q180 =
+      lCYC::math::axisAngle(lCYC::math::Vector3::forward(), lCYC::math::PI);
   auto v180 = q180 * lCYC::math::Vector3::right();
   EXPECT_NEAR(v180.x, -1.0f, 1e-5f);
   EXPECT_NEAR(v180.y, 0.0f, 1e-5f);
@@ -441,7 +458,8 @@ static void test_quaternion_axis_angle() {
   EXPECT_NEAR(lCYC::math::length(v180), 1.0f, 1e-5f);
 
   // 零轴安全 → 单位四元数
-  auto qz = lCYC::math::axisAngle(lCYC::math::Vector3::zero(), lCYC::math::HALF_PI);
+  auto qz =
+      lCYC::math::axisAngle(lCYC::math::Vector3::zero(), lCYC::math::HALF_PI);
   auto vz = qz * lCYC::math::Vector3::right();
   EXPECT_NEAR(vz.x, 1.0f, 1e-6f); // 不旋转
 }
@@ -450,8 +468,10 @@ static void test_quaternion_composition() {
   TEST("M4_composition");
 
   // 先绕 Z 转 90° 再绕 X 转 90° = 复合
-  auto qz = lCYC::math::axisAngle(lCYC::math::Vector3::forward(), lCYC::math::HALF_PI);
-  auto qx = lCYC::math::axisAngle(lCYC::math::Vector3::right(), lCYC::math::HALF_PI);
+  auto qz = lCYC::math::axisAngle(lCYC::math::Vector3::forward(),
+                                  lCYC::math::HALF_PI);
+  auto qx =
+      lCYC::math::axisAngle(lCYC::math::Vector3::right(), lCYC::math::HALF_PI);
 
   // 先应用 qz 再应用 qx
   auto composed = qx * qz;
@@ -465,7 +485,8 @@ static void test_quaternion_composition() {
 static void test_quaternion_inverse() {
   TEST("M4_inverse");
 
-  auto q = lCYC::math::axisAngle(lCYC::math::Vector3::up(), lCYC::math::deg2rad(60.0f));
+  auto q = lCYC::math::axisAngle(lCYC::math::Vector3::up(),
+                                 lCYC::math::deg2rad(60.0f));
   auto inv = q.inverse();
 
   // q * q⁻¹ = 单位
@@ -509,7 +530,8 @@ static void test_quaternion_slerp() {
   TEST("M4_slerp");
 
   auto q0 = lCYC::math::Quaternion::identity();
-  auto q1 = lCYC::math::axisAngle(lCYC::math::Vector3::forward(), lCYC::math::HALF_PI);
+  auto q1 = lCYC::math::axisAngle(lCYC::math::Vector3::forward(),
+                                  lCYC::math::HALF_PI);
 
   // t=0 → q0
   auto s0 = lCYC::math::slerp(q0, q1, 0.0f);
@@ -541,24 +563,28 @@ static void test_quaternion_look_rotation() {
   TEST("M4_lookRotation");
 
   // 朝向 +Z
-  auto q = lCYC::math::lookRotation(lCYC::math::Vector3::forward(), lCYC::math::Vector3::up());
+  auto q = lCYC::math::lookRotation(lCYC::math::Vector3::forward(),
+                                    lCYC::math::Vector3::up());
   auto v = q * lCYC::math::Vector3::forward();
   EXPECT_NEAR(v.z, 1.0f, 1e-5f);
 
   // 朝向 +X（up 默认）
-  auto qx = lCYC::math::lookRotation(lCYC::math::Vector3::right(), lCYC::math::Vector3::up());
+  auto qx = lCYC::math::lookRotation(lCYC::math::Vector3::right(),
+                                     lCYC::math::Vector3::up());
   auto vx = qx * lCYC::math::Vector3::forward();
   EXPECT_NEAR(vx.x, 1.0f, 1e-4f);
   EXPECT_NEAR(vx.y, 0.0f, 1e-4f);
   EXPECT_NEAR(vx.z, 0.0f, 1e-4f);
 
   // 万向锁：forward == up（应回退到世界 up）
-  auto qg = lCYC::math::lookRotation(lCYC::math::Vector3::up(), lCYC::math::Vector3::up());
+  auto qg = lCYC::math::lookRotation(lCYC::math::Vector3::up(),
+                                     lCYC::math::Vector3::up());
   auto vg = qg * lCYC::math::Vector3::forward();
   EXPECT_NEAR(lCYC::math::length(vg), 1.0f, 1e-4f); // 至少不崩溃、长度保持
 
   // 零向量防御
-  auto qz = lCYC::math::lookRotation(lCYC::math::Vector3::zero(), lCYC::math::Vector3::up());
+  auto qz = lCYC::math::lookRotation(lCYC::math::Vector3::zero(),
+                                     lCYC::math::Vector3::up());
   EXPECT_EQ(qz.w, 1.0f);
 }
 
@@ -622,7 +648,8 @@ static void test_mat4_rotation() {
   TEST("M5_rotation");
 
   // 绕 Z 轴 90°（与 Quaternion 一致）
-  auto q = lCYC::math::axisAngle(lCYC::math::Vector3::forward(), lCYC::math::HALF_PI);
+  auto q = lCYC::math::axisAngle(lCYC::math::Vector3::forward(),
+                                 lCYC::math::HALF_PI);
   auto rot = lCYC::math::rotation(q);
 
   auto v = rot * lCYC::math::Vector3::right();
@@ -724,13 +751,15 @@ static void test_mat4_projection() {
   TEST("M5_projection");
 
   // 正交投影：中心点 → 原点附近
-  auto ortho = lCYC::math::orthographic(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 100.0f);
+  auto ortho =
+      lCYC::math::orthographic(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 100.0f);
   auto center = ortho * lCYC::math::Vector3(0.0f, 0.0f, -50.0f);
   EXPECT_NEAR(center.x, 0.0f, 1e-4f);
   EXPECT_NEAR(center.y, 0.0f, 1e-4f);
 
   // 透视：近平面中心点保持
-  auto persp = lCYC::math::perspective(lCYC::math::deg2rad(60.0f), 1.0f, 0.1f, 100.0f);
+  auto persp =
+      lCYC::math::perspective(lCYC::math::deg2rad(60.0f), 1.0f, 0.1f, 100.0f);
   auto pv = persp * lCYC::math::Vector3(0.0f, 0.0f, -0.1f); // 近平面
   EXPECT_NEAR(pv.x, 0.0f, 1e-4f);
   EXPECT_NEAR(pv.y, 0.0f, 1e-4f);
@@ -740,8 +769,9 @@ static void test_mat4_lookat() {
   TEST("M5_lookAt");
 
   // 相机在原点看向 -Z（默认前方）
-  auto view = lCYC::math::lookAt(lCYC::math::Vector3::zero(), lCYC::math::Vector3::back(),
-                           lCYC::math::Vector3::up());
+  auto view = lCYC::math::lookAt(lCYC::math::Vector3::zero(),
+                                 lCYC::math::Vector3::back(),
+                                 lCYC::math::Vector3::up());
   auto v = view * lCYC::math::Vector3::back();
   // 相机看向 -Z：back(-Z) 处的物体在视空间前方 -Z
   EXPECT_NEAR(v.x, 0.0f, 1e-4f);
@@ -749,24 +779,27 @@ static void test_mat4_lookat() {
   EXPECT_NEAR(v.z, -1.0f, 1e-4f);
 
   // 相机看向 +Z：+Z 处物体在视空间前方 -Z
-  auto view2 = lCYC::math::lookAt(lCYC::math::Vector3::zero(), lCYC::math::Vector3::forward(),
-                            lCYC::math::Vector3::up());
+  auto view2 = lCYC::math::lookAt(lCYC::math::Vector3::zero(),
+                                  lCYC::math::Vector3::forward(),
+                                  lCYC::math::Vector3::up());
   auto v2 = view2 * lCYC::math::Vector3::forward();
   EXPECT_NEAR(v2.x, 0.0f, 1e-4f);
   EXPECT_NEAR(v2.y, 0.0f, 1e-4f);
   EXPECT_NEAR(v2.z, -1.0f, 1e-4f);
 
   // 边界：eye == target → 返回单位矩阵（不产生 NaN）
-  auto viewId = lCYC::math::lookAt(lCYC::math::Vector3(1, 2, 3), lCYC::math::Vector3(1, 2, 3),
-                             lCYC::math::Vector3::up());
+  auto viewId = lCYC::math::lookAt(lCYC::math::Vector3(1, 2, 3),
+                                   lCYC::math::Vector3(1, 2, 3),
+                                   lCYC::math::Vector3::up());
   auto vid = viewId * lCYC::math::Vector3(1.0f, 1.0f, 1.0f);
   EXPECT(vid.x == vid.x && vid.y == vid.y && vid.z == vid.z,
          "eye==target should not produce NaN");
   EXPECT_NEAR(viewId.at(0, 0), 1.0f, 1e-6f); // 单位矩阵
 
   // 边界：up ∥ forward（万向锁）→ 不产生 NaN
-  auto viewG = lCYC::math::lookAt(lCYC::math::Vector3::zero(), lCYC::math::Vector3::up(),
-                            lCYC::math::Vector3::up());
+  auto viewG =
+      lCYC::math::lookAt(lCYC::math::Vector3::zero(), lCYC::math::Vector3::up(),
+                         lCYC::math::Vector3::up());
   auto vg = viewG * lCYC::math::Vector3::up();
   EXPECT(vg.x == vg.x && vg.y == vg.y && vg.z == vg.z,
          "gimbal lock should not produce NaN");
@@ -808,7 +841,8 @@ static void test_mat3_rotation() {
   EXPECT_NEAR(vr.z, -1.0f, 1e-5f);
 
   // 四元数构造矩阵与绕轴一致
-  auto q = lCYC::math::axisAngle(lCYC::math::Vector3::forward(), lCYC::math::HALF_PI);
+  auto q = lCYC::math::axisAngle(lCYC::math::Vector3::forward(),
+                                 lCYC::math::HALF_PI);
   auto mq = lCYC::math::rotation3x3(q);
   auto vq = mq * lCYC::math::Vector3::right();
   EXPECT_NEAR(vq.x, 0.0f, 1e-5f);
@@ -855,17 +889,17 @@ static void test_mat3_2d() {
 static void test_mat3_4x4_convert() {
   TEST("M6_4x4_convert");
 
-  auto m4 =
-      lCYC::math::translation(lCYC::math::Vector3(1.0f, 2.0f, 3.0f)) *
-      lCYC::math::rotation(lCYC::math::axisAngle(lCYC::math::Vector3::forward(), lCYC::math::HALF_PI));
-  auto m3 = lCYC::math::Matrix3x3::fromMatrix4x4(m4);
+  auto m4 = lCYC::math::translation(lCYC::math::Vector3(1.0f, 2.0f, 3.0f)) *
+            lCYC::math::rotation(lCYC::math::axisAngle(
+                lCYC::math::Vector3::forward(), lCYC::math::HALF_PI));
+  auto m3 = lCYC::math::fromMatrix4x4(m4);
   // 3x3 提取应保留旋转部分
   auto v = m3 * lCYC::math::Vector3::right();
   EXPECT_NEAR(v.x, 0.0f, 1e-5f);
   EXPECT_NEAR(v.y, 1.0f, 1e-5f);
 
   // 3x3 → 4x4 往返
-  auto back = m3.toMatrix4x4();
+  auto back = lCYC::math::toMatrix4x4(m3);
   EXPECT_NEAR(back.at(0, 3), 0.0f, 1e-6f); // 无平移
   EXPECT_NEAR(back.at(0, 0), m3.at(0, 0), 1e-6f);
 }
@@ -875,7 +909,7 @@ static void test_mat3_normal_matrix() {
 
   // 非均匀缩放下的法线矩阵（3x3）
   auto s = lCYC::math::scale3x3(lCYC::math::Vector3(2.0f, 1.0f, 1.0f));
-  auto nm = s.normalMatrix();
+  auto nm = lCYC::math::normalMatrix(s);
 
   // 法线 (1,0,0) 经缩放后应仍垂直（非均匀缩放下法线需逆转置）
   lCYC::math::Vector3 normal(1.0f, 0.0f, 0.0f);
@@ -889,8 +923,9 @@ static void test_trs() {
   TEST("M7_trs");
 
   auto m = lCYC::math::trs(lCYC::math::Vector3(10.0f, 20.0f, 30.0f),
-                     lCYC::math::axisAngle(lCYC::math::Vector3::forward(), lCYC::math::HALF_PI),
-                     lCYC::math::Vector3(2.0f, 2.0f, 2.0f));
+                           lCYC::math::axisAngle(lCYC::math::Vector3::forward(),
+                                                 lCYC::math::HALF_PI),
+                           lCYC::math::Vector3(2.0f, 2.0f, 2.0f));
   // 先缩放再旋转再平移: v=(1,0,0) → scale(2,0,0) → rot(0,2,0) → trans(10,22,30)
   auto v = m * lCYC::math::Vector3(1.0f, 0.0f, 0.0f);
   EXPECT_NEAR(v.x, 10.0f, 1e-5f);
@@ -904,8 +939,9 @@ static void test_decompose() {
   lCYC::math::Vector3 pos, scale;
   lCYC::math::Quaternion rot;
   auto m = lCYC::math::trs(lCYC::math::Vector3(1.0f, 2.0f, 3.0f),
-                     lCYC::math::axisAngle(lCYC::math::Vector3::up(), lCYC::math::deg2rad(45.0f)),
-                     lCYC::math::Vector3(2.0f, 3.0f, 4.0f));
+                           lCYC::math::axisAngle(lCYC::math::Vector3::up(),
+                                                 lCYC::math::deg2rad(45.0f)),
+                           lCYC::math::Vector3(2.0f, 3.0f, 4.0f));
 
   bool ok = lCYC::math::decomposeTRS(m, pos, rot, scale);
   EXPECT(ok, "decompose should succeed");
@@ -919,7 +955,8 @@ static void test_decompose() {
   EXPECT_NEAR(scale.y, 3.0f, 1e-4f);
   EXPECT_NEAR(scale.z, 4.0f, 1e-4f);
   // 旋转还原（与原始一致）
-  auto orig = lCYC::math::axisAngle(lCYC::math::Vector3::up(), lCYC::math::deg2rad(45.0f));
+  auto orig = lCYC::math::axisAngle(lCYC::math::Vector3::up(),
+                                    lCYC::math::deg2rad(45.0f));
   EXPECT(std::abs(lCYC::math::dot(rot, orig)) > 0.999f,
          "rotation should be restored (up to sign)");
 
@@ -959,20 +996,22 @@ static void test_euler_roundtrip() {
 static void test_transform_point_direction() {
   TEST("M7_transformPointDirection");
 
-  auto m =
-      lCYC::math::trs(lCYC::math::Vector3(10.0f, 0.0f, 0.0f), lCYC::math::Quaternion::identity());
+  auto m = lCYC::math::trs(lCYC::math::Vector3(10.0f, 0.0f, 0.0f),
+                           lCYC::math::Quaternion::identity());
   // transformPoint 带平移
   auto p = lCYC::math::transformPoint(m, lCYC::math::Vector3(1.0f, 2.0f, 3.0f));
   EXPECT_NEAR(p.x, 11.0f, 1e-6f);
   // transformDirection 不带平移
-  auto d = lCYC::math::transformDirection(m, lCYC::math::Vector3(1.0f, 0.0f, 0.0f));
+  auto d =
+      lCYC::math::transformDirection(m, lCYC::math::Vector3(1.0f, 0.0f, 0.0f));
   EXPECT_NEAR(d.x, 1.0f, 1e-6f); // 方向不受平移影响
 }
 
 static void test_rotate_vector() {
   TEST("M7_rotateVector");
 
-  auto q = lCYC::math::axisAngle(lCYC::math::Vector3::forward(), lCYC::math::HALF_PI);
+  auto q = lCYC::math::axisAngle(lCYC::math::Vector3::forward(),
+                                 lCYC::math::HALF_PI);
   auto v = lCYC::math::rotateVector(q, lCYC::math::Vector3::right());
   EXPECT_NEAR(v.x, 0.0f, 1e-5f);
   EXPECT_NEAR(v.y, 1.0f, 1e-5f);

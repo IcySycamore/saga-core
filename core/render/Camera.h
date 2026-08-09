@@ -6,7 +6,6 @@
  *   - 位置/朝向（lookAt）→ 视图矩阵 V
  *   - 投影类型（透视/正交）→ 投影矩阵 P
  *   - MVP = P * V * M 的 V 和 P 部分
- * @note C++20
  */
 
 #include "core/math/Math.h"
