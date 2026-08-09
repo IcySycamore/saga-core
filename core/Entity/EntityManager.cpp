@@ -199,7 +199,7 @@ EntityInstance *EntityManager::createInstance(int32_t type_id) {
   if (itArc == nullptr)
     return nullptr;
 // 代表物语义优化（ADR-0003）：由构建时宏 REP_SEMANTIC_OPTIMIZATION 控制
-//（CMake option TRPG_ENABLE_REP_SEMANTIC_OPTIMIZATION，默认 ON）
+// （CMake option TRPG_ENABLE_REP_SEMANTIC_OPTIMIZATION，默认 ON）
 #ifdef REP_SEMANTIC_OPTIMIZATION
   if (itArc->m_defaults.empty()) {
     if (m_rep_type_2_uuid.contains(type_id)) {
@@ -275,11 +275,10 @@ bool EntityManager::saveInstances(const std::string &path) {
     obj["uuid"] = boost::json::string(boost::uuids::to_string(id));
     obj["type_id"] = inst->getTypeID();
 
-    // 代表物判定：该 type 的代表物 uuid == 当前实例（ADR-0003）
+    // 代表物判定
     const bool is_rep = m_rep_type_2_uuid.contains(inst->getTypeID()) &&
                         m_rep_type_2_uuid.at(inst->getTypeID()) == id;
     if (!is_rep) {
-      // 动态组件序列化（ADR-0006：dynamic_cast 外部分支）
       boost::json::object comps;
       inst->forEachComponent([&](int32_t semantic,
                                  const DynamicComponent *comp) {
@@ -341,7 +340,7 @@ bool EntityManager::loadInstances(const std::string &path) {
 
   std::unique_lock lock(m_pool_mutex);
 
-  // 先读代表物注册表（供实例条目判定）
+  // 先读代表物注册表
   std::unordered_map<int32_t, uuid> rep_table;
   if (root_obj.contains("representatives") &&
       root_obj.at("representatives").is_object()) {
@@ -349,15 +348,14 @@ bool EntityManager::loadInstances(const std::string &path) {
     for (const auto &[key, value] :
          root_obj.at("representatives").as_object()) {
       if (!value.is_string()) {
-        continue; // 损坏条目跳过（尽力而为）
+        continue; // 损坏条目跳过
       }
       int32_t type_id = std::stoi(std::string(key));
       rep_table[type_id] = gen(value.as_string().c_str());
     }
   }
 
-  if (!root_obj.contains("instances") ||
-      !root_obj.at("instances").is_array()) {
+  if (!root_obj.contains("instances") || !root_obj.at("instances").is_array()) {
     std::cerr << "[EntityManager] Missing 'instances' array." << std::endl;
     return false;
   }
@@ -374,7 +372,7 @@ bool EntityManager::loadInstances(const std::string &path) {
     }
     const uuid id = uuid_gen(obj.at("uuid").as_string().c_str());
     if (id.is_nil()) {
-      continue; // 无效 uuid
+      continue;
     }
     const int32_t type_id = static_cast<int32_t>(obj.at("type_id").as_int64());
 
@@ -382,12 +380,12 @@ bool EntityManager::loadInstances(const std::string &path) {
     inst->setUuid(id);
     inst->setTypeID(type_id);
 
-    // 代表物判定：该 type 的代表物 uuid == 此条 → 注册，不填组件
-    const bool is_rep = rep_table.contains(type_id) && rep_table.at(type_id) == id;
+    // 代表物判定
+    const bool is_rep =
+        rep_table.contains(type_id) && rep_table.at(type_id) == id;
     if (is_rep) {
       m_rep_type_2_uuid[type_id] = id;
-    } else if (obj.contains("components") &&
-               obj.at("components").is_object()) {
+    } else if (obj.contains("components") && obj.at("components").is_object()) {
       for (const auto &[key, value] : obj.at("components").as_object()) {
         const int32_t semantic = std::stoi(std::string(key));
         if (value.is_int64()) {
@@ -395,8 +393,8 @@ bool EntityManager::loadInstances(const std::string &path) {
           counter->setCounter(static_cast<int32_t>(value.as_int64()));
           inst->addComponent(semantic, std::move(counter));
         } else if (value.is_array()) {
-          auto vec = std::make_unique<CounterVecComponent>(
-              value.as_array().size());
+          auto vec =
+              std::make_unique<CounterVecComponent>(value.as_array().size());
           size_t i = 0;
           for (const auto &elem : value.as_array()) {
             if (elem.is_int64()) {

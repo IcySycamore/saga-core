@@ -69,11 +69,11 @@ target_include_directories(trpg_core PUBLIC
 )
 target_link_libraries(trpg_core PUBLIC Boost::json)
 
-# 代表物语义优化：构建时命令行可选参数，默认开启
-# 关闭方式：cmake -DTRPG_ENABLE_REP_SEMANTIC_OPTIMIZATION=OFF
-option(TRPG_ENABLE_REP_SEMANTIC_OPTIMIZATION
+# 代表物语义优化
+# 关闭方式：cmake -D REP_SEMANTIC_OPTIMIZATION=OFF
+option(REP_SEMANTIC_OPTIMIZATION
        "Enable representative semantic optimization" ON)
-if(TRPG_ENABLE_REP_SEMANTIC_OPTIMIZATION)
+if(REP_SEMANTIC_OPTIMIZATION)
     target_compile_definitions(trpg_core PRIVATE REP_SEMANTIC_OPTIMIZATION)
 endif()
 
