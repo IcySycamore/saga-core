@@ -159,19 +159,8 @@ inline Matrix3x3 rotation3x3(const Quaternion &q) {
 }
 
 // ============================ 欧拉角互转 ============================
-// 顺序约定: 标准 ZYX（应用顺序先绕 X 再绕 Y 再绕 Z）——与 Quaternion::euler 一致
 
-/// 欧拉角（弧度，ZYX）→ 四元数（封装 Quaternion::euler）
-inline Quaternion eulerToQuat(float pitchX, float yawY, float rollZ) {
-  return euler(pitchX, yawY, rollZ);
-}
-
-/// Vector3 欧拉角（弧度，x=pitch, y=yaw, z=roll）→ 四元数
-inline Quaternion eulerToQuat(const Vector3 &eulerAngles) {
-  return euler(eulerAngles.x, eulerAngles.y, eulerAngles.z);
-}
-
-/// 四元数 → 欧拉角（弧度）
+/// 四元数 → 欧拉弧度角
 /// 匹配 Quaternion::euler 的参数布局（euler(pitchX, yawY, rollZ) = qz·qy·qx）
 /// 经数值验证: euler(p, y, r) 的四元数分量布局使
 ///   yaw  = asin(2(wy − xz))   [y 分量编码 yaw]
@@ -200,7 +189,7 @@ inline Vector3 quatToEuler(const Quaternion &q) {
 
 /// 欧拉角 → 旋转矩阵（4x4，无平移）
 inline Matrix4x4 eulerToMatrix(const Vector3 &eulerAngles) {
-  return rotation(eulerToQuat(eulerAngles));
+  return rotation(euler(eulerAngles.x, eulerAngles.y, eulerAngles.z));
 }
 
 /// 从 4x4 提取欧拉角（经四元数中转）

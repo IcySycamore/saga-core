@@ -2,7 +2,7 @@
 /**
  * @brief SDL3 渲染设备实现
  * @namespace lCYC::render
- * @note 用 SDL3 软件渲染器实现 RenderDevice 纯接口
+ * @details 用 SDL3 软件渲染器实现 RenderDevice 纯接口
  */
 
 #include "core/render/RenderDevice.h"

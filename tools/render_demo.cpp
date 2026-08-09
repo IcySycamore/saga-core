@@ -324,7 +324,7 @@ int main(int argc, char *argv[]) {
      * M = T(0,0.8,0) * R：先绕自身中心旋转，再平移到网格上方（底贴 y=0） */
     const double t = clock.getLogicTime();
     const float angle = static_cast<float>(t) * 1.5f; // 1.5 rad/s
-    const lCYC::math::Quaternion rot = lCYC::math::axisAngle({0.0f, 1.0f, 0.0f}, angle);
+    const lCYC::math::Quaternion rot = lCYC::math::Quaternion({0.0f, 1.0f, 0.0f}, angle);
     const lCYC::math::Matrix4x4 M_rot =
         lCYC::math::translation({0.0f, 0.8f, 0.0f}) * lCYC::math::rotation(rot);
     device->drawMesh(rotatingCube, vp * M_rot);

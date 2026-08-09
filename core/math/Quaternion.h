@@ -26,6 +26,23 @@ struct Quaternion {
   constexpr Quaternion(float x_, float y_, float z_, float w_)
       : x(x_), y(y_), z(z_), w(w_) {}
 
+  /// 轴角构造（axis 会归一化；零轴返回单位四元数）
+  /// @note 依赖 sin/cos/sqrt
+  inline Quaternion(const Vector3 &axis, float angleRad) {
+    const float lenSq = lCYC::math::lengthSquared(axis); // Vector3 自由函数
+    if (lenSq == 0.0f) {
+      *this = identity();
+      return;
+    }
+    const Vector3 n = axis * (1.0f / std::sqrt(lenSq));
+    const float half = angleRad * 0.5f;
+    const float s = std::sin(half);
+    x = n.x * s;
+    y = n.y * s;
+    z = n.z * s;
+    w = std::cos(half);
+  }
+
   // ============================ 静态常量 ============================
 
   static constexpr Quaternion identity() { return Quaternion(0, 0, 0, 1); }
@@ -110,22 +127,9 @@ constexpr float dot(const Quaternion &a, const Quaternion &b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 
-/// 轴角构造。axis 会被归一化（零轴返回单位四元数）
-inline Quaternion axisAngle(const Vector3 &axis, float angleRad) {
-  const float lenSq = lengthSquared(axis);
-  if (lenSq == 0.0f) {
-    return Quaternion::identity();
-  }
-  const Vector3 n = axis * (1.0f / std::sqrt(lenSq));
-  const float half = angleRad * 0.5f;
-  const float s = std::sin(half);
-  return Quaternion(n.x * s, n.y * s, n.z * s, std::cos(half));
-}
-
-/// 欧拉角构造（弧度，ZYX 应用顺序：先绕 X 再绕 Y 再绕 Z，即 q = qz·qy·qx）
-/// 这是标准 ZYX 欧拉约定（与 Unity 一致）
-/// @note 万向锁：pitch = ±90° 时 yaw/roll 不可唯一分解（本构造无歧义，
-///       但 quatToEuler 提取时会奇异，见 TransformTools）
+/// 欧拉角构造
+/// @note 万向锁：pitch = ±90° 时 yaw/roll 不可唯一分解
+/// 构造无歧义，但 quatToEuler 提取时会奇异，见 TransformTools
 inline Quaternion euler(float pitchX, float yawY, float rollZ) {
   const float cx = std::cos(pitchX * 0.5f);
   const float sx = std::sin(pitchX * 0.5f);

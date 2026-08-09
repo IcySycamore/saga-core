@@ -2,7 +2,7 @@
 /**
  * @brief 软件光栅化后端
  * @namespace lCYC::render
- * @note 职责:
+ * @details 职责:
  *   - 纯 CPU 光栅化：顶点变换 → 屏幕坐标 → 逐像素填帧缓冲
  *   - 深度缓冲：逐像素深度测试
  *   - 三角形光栅化：重心坐标 + 插值
@@ -12,7 +12,6 @@
  *   - 帧缓冲可被外部读取（framebuffer()），由显示层/测试消费
  *   - init 忽略窗口句柄（纯 CPU 无窗口），endFrame 无 present（显示在外部）
  * @note 像素格式：uint32_t RGBA8888（0xRRGGBBAA）
- * @note C++20
  */
 
 #include "core/math/Math.h"

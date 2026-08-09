@@ -16,7 +16,7 @@
 - [ ] `Matrix4x4 trs(pos, rot, scale)`（TRS 合成，顺序 T*R*S 约定明确）
 - [ ] `Matrix4x4 trs(pos, rot)`（默认 scale=1）
 - [ ] 分解：`decomposeTRS(mat, pos, rot, scale)`（从矩阵还原，文档标注非唯一性）
-- [ ] 欧拉↔四元数：`Quaternion eulerToQuat(x,y,z)` / `eulerToQuat(Vector3)` / `quatToEuler(q)`
+- [ ] 欧拉↔四元数：`euler(pitch,yaw,roll)` / `quatToEuler(q)`（eulerToQuat 冗余封装已删）
 - [ ] 欧拉↔矩阵：`Matrix4x4 eulerToMatrix(...)` / 从矩阵提取欧拉
 - [ ] `Matrix4x4 lookAt(eye, target, up)` 封装（调用 M5）
 - [ ] `Vector3 transformPoint(mat, v)` / `transformDirection(mat, v)`（明确区分：point 带平移，direction 不带）

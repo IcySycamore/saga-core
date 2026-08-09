@@ -1039,7 +1039,7 @@ while (running):
 ```cpp
 const double t = clock.getLogicTime();               // 逻辑时间（tick 对齐）
 const float angle = (float)t * 1.5f;                 // 角速度 1.5 rad/s
-Quaternion rot = lCYC::math::axisAngle({0,1,0}, angle);    // 绕 Y 轴
+Quaternion rot = lCYC::math::Quaternion({0,1,0}, angle);   // 绕 Y 轴
 Matrix4x4 M_rot = lCYC::math::translation({0,0.8,0}) * lCYC::math::rotation(rot);
 ```
 
