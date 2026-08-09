@@ -2,7 +2,6 @@
 /**
  * @brief 基础数学库
  * @namespace lCYC::math
- * @note C++20，constexpr优先，无 RTTI
  */
 
 #include <cmath>

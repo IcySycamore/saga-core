@@ -1,10 +1,8 @@
 #pragma once
 /**
- * @brief 三阶矩阵（旋转/法线/2D 变换）
+ * @brief 三阶矩阵
  * @namespace lCYC::math
- * @note 存储约定: 列主序 column-major，m[col * 3 + row]（与 Matrix4x4 一致）
- * @note C++20，constexpr 优先，无 RTTI
- * @note 规格: docs/math/M6-matrix3x3.md
+ * @note 存储约定: 列主序 column-major，m[col * 3 + row]
  */
 
 #include "Math.h"
@@ -62,7 +60,6 @@ struct Matrix3x3 {
 
   // ============================ 运算符 ============================
 
-  /// 矩阵乘：this * rhs = 先应用 rhs 再应用 this
   constexpr Matrix3x3 operator*(const Matrix3x3 &rhs) const {
     Matrix3x3 result;
     for (int col = 0; col < 3; ++col) {
@@ -77,17 +74,10 @@ struct Matrix3x3 {
     return result;
   }
 
-  /// 变换向量
   constexpr Vector3 operator*(const Vector3 &v) const {
     return Vector3(m[0] * v.x + m[3] * v.y + m[6] * v.z,
                    m[1] * v.x + m[4] * v.y + m[7] * v.z,
                    m[2] * v.x + m[5] * v.y + m[8] * v.z);
-  }
-
-  /// 变换 2D 向量
-  constexpr Vector2 operator*(const Vector2 &v) const {
-    return Vector2(m[0] * v.x + m[3] * v.y + m[6],
-                   m[1] * v.x + m[4] * v.y + m[7]);
   }
 
   constexpr bool operator==(const Matrix3x3 &rhs) const {
@@ -203,7 +193,19 @@ constexpr Matrix3x3 rotationY(float angleRad) {
   return result;
 }
 
-/// 绕 Z 轴旋转矩阵（弧度，右手系：right → up）
+/**
+ * @brief 创建2D旋转矩阵
+ *
+ * @param angleRad 从x正半轴逆时针旋转角度
+ * @return constexpr Matrix3x3
+ * @details 2D 平面旋转 = 3D 绕 Z 轴旋转限制在 xy 平面（w 分量不变），
+ *  直接复用 rotationZ。
+ *  原向量长度L, 夹角alpha, 旋转后向量与原向量夹角theta
+ *  x' = Lcos(theta+alpha) = Lcos(theta)cos(alpha) + Lsin(theta)sin(alpha)
+ *  = cos(theta)x + sin(theta)y
+ *  y' = Lsin(theta+alpha) = Lsin(theta)cos(alpha) - Lcos(theta)sin(alpha)
+ *  = sin(theta)x - cos(theta)y
+ */
 constexpr Matrix3x3 rotationZ(float angleRad) {
   Matrix3x3 result;
   const float c = std::cos(angleRad);
@@ -215,12 +217,12 @@ constexpr Matrix3x3 rotationZ(float angleRad) {
   return result;
 }
 
-/// 由四元数构造 3x3 旋转矩阵（命名加 3x3 后缀避免与 Matrix4x4::rotation 冲突）
+/// 由四元数构造 3x3 旋转矩阵
 inline Matrix3x3 rotation3x3(const Quaternion &q) {
   return Matrix3x3::fromMatrix4x4(lCYC::math::rotation(q));
 }
 
-/// 3x3 缩放矩阵（命名加 3x3 后缀避免与 Matrix4x4::scale 冲突）
+/// 3x3 缩放矩阵，三维向量规格化到三维矩阵
 constexpr Matrix3x3 scale3x3(const Vector3 &s) {
   Matrix3x3 result;
   result.at(0, 0) = s.x;
@@ -228,20 +230,28 @@ constexpr Matrix3x3 scale3x3(const Vector3 &s) {
   result.at(2, 2) = s.z;
   return result;
 }
+/**
+ * @brief 创建2D旋转矩阵
+ *
+ * @param angleRad 从x正半轴逆时针旋转角度
+ * @return constexpr Matrix3x3
+ * @details 2D 平面旋转 = 3D 绕 Z 轴旋转限制在 xy 平面（w 分量不变），
+ *  直接复用 rotationZ。
+ *  原向量长度L, 夹角alpha, 旋转后向量与原向量夹角theta
+ *  x' = Lcos(theta+alpha) = Lcos(theta)cos(alpha) + Lsin(theta)sin(alpha)
+ *  = cos(theta)x + sin(theta)y
+ *  y' = Lsin(theta+alpha) = Lsin(theta)cos(alpha) - Lcos(theta)sin(alpha)
+ *  = sin(theta)x - cos(theta)y
+ */
+constexpr Matrix3x3 rotation2D(float angleRad) { return rotationZ(angleRad); }
 
-/// 2D 旋转矩阵（3x3 齐次，绕原点，逆时针为正）
-constexpr Matrix3x3 rotation2D(float angleRad) {
-  Matrix3x3 result;
-  const float c = std::cos(angleRad);
-  const float s = std::sin(angleRad);
-  result.at(0, 0) = c;
-  result.at(1, 0) = s;  // 列0 (x轴基) 的 y 分量 = sinθ
-  result.at(0, 1) = -s; // 列1 (y轴基) 的 x 分量 = -sinθ
-  result.at(1, 1) = c;
-  return result;
-}
-
-/// 2D 平移矩阵（3x3 齐次，平移在第三列）
+/**
+ * @brief 创建2D平移矩阵
+ *
+ * @param x x方向平移浮点量
+ * @param y y方向平移浮点量
+ * @return constexpr Matrix3x3
+ */
 constexpr Matrix3x3 translation2D(float x, float y) {
   Matrix3x3 result;
   result.at(0, 2) = x;

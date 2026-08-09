@@ -839,15 +839,15 @@ static void test_mat3_inverse_det() {
 static void test_mat3_2d() {
   TEST("M6_2d");
 
-  // 2D 旋转 90°
+  // 2D 旋转 90°：显式提升为齐次点 (x,y,1)，再乘 3x3 矩阵
   auto r2d = lCYC::math::rotation2D(lCYC::math::HALF_PI);
-  auto v = r2d * lCYC::math::Vector2(1.0f, 0.0f);
+  auto v = r2d * lCYC::math::Vector3(1.0f, 0.0f, 1.0f);
   EXPECT_NEAR(v.x, 0.0f, 1e-5f);
   EXPECT_NEAR(v.y, 1.0f, 1e-5f);
 
-  // 2D 平移
+  // 2D 平移：同样显式提升
   auto t2d = lCYC::math::translation2D(10.0f, 20.0f);
-  auto p = t2d * lCYC::math::Vector2(1.0f, 2.0f);
+  auto p = t2d * lCYC::math::Vector3(1.0f, 2.0f, 1.0f);
   EXPECT_NEAR(p.x, 11.0f, 1e-5f);
   EXPECT_NEAR(p.y, 22.0f, 1e-5f);
 }
