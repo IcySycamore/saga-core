@@ -28,7 +28,7 @@ private:
 public:
   /**
    * @brief 设置透视投影
-   * @param fovY 垂直视场角，弧度范围(0, π)
+   * @param fovY 垂直视场弧度角，(0, π)
    * @param near_ 近裁剪面距离 > 0
    * @param far_ 远裁剪面距离 > near_
    */
@@ -62,7 +62,7 @@ public:
    * @brief 设置相机位置与朝向
    * @param eye 相机位置
    * @param target 观察目标点
-   * @param up 头顶方向，用于摆正画面（默认世界向上）
+   * @param up 参考向上方向（默认世界上）
    */
   void lookAt(const lCYC::math::Vector3 &eye, const lCYC::math::Vector3 &target,
               const lCYC::math::Vector3 &up = lCYC::math::Vector3::up()) {

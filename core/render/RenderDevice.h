@@ -1,7 +1,6 @@
 #pragma once
 /**
- * @brief 图形后端抽象接口（RenderDevice：底层设备抽象，对应 Godot
- * RenderingDevice / Unreal RHI）
+ * @brief 图形后端抽象接口
  * @namespace lCYC::render
  * @note
  *   - 纯虚接口
