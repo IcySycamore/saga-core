@@ -58,6 +58,19 @@ public:
   }
   void setTypeID(int32_t type_id) { m_type_id = type_id; }
 
+  /// 设置 uuid
+  void setUuid(const boost::uuids::uuid &id) { m_id = id; }
+
+  /**
+   * @brief 只读遍历动态组件
+   * @param fn 回调 fn(int32_t semantic, const DynamicComponent *comp)
+   */
+  template <typename Fn> void forEachComponent(Fn &&fn) const {
+    for (const auto &[semantic, comp] : m_component) {
+      fn(semantic, comp.get());
+    }
+  }
+
   void onAttach() { ++m_ref_count; }
   void onDetach() { --m_ref_count; }
 };

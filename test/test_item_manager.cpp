@@ -10,7 +10,9 @@
 #include "core/Entity/EntityType.h"
 #include "core/Entity/ItemSlot.h"
 #include <cassert>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 
@@ -196,6 +198,75 @@ static void test_handler_register() {
   EXPECT(no_handler == nullptr, "unregistered handler should be nullptr");
 }
 
+// ===================== 测试 7: 持久化往返（ADR-0005） =====================
+static void test_persistence_roundtrip() {
+  TEST("persistence_roundtrip");
+
+  auto &mgr = EntityManager::getManager();
+  mgr.reload("test/test_items.json");
+
+  auto inst = mgr.createInstance(4001);
+  EXPECT(inst != nullptr, "create 4001 should succeed");
+  if (!inst)
+    return;
+  const auto uuid = inst->getUuid();
+  // 改默认值验证往返保留
+  auto *counter = inst->getComponent<CounterComponent>(30);
+  EXPECT(counter != nullptr, "4001 should have Counter at 30");
+  if (counter)
+    counter->setCounter(7);
+
+  // 创建代表物（4003 无 defaults）→ 应写入 representatives（不存 components）
+  auto *rep = mgr.createInstance(4003);
+  EXPECT(rep != nullptr, "create representative 4003 should succeed");
+
+  EXPECT(mgr.saveInstances("test/persist_tmp.json"),
+         "saveInstances should succeed");
+
+  // 验证代表物注册表已序列化（ADR-0005：representatives 字段含 4003）
+  {
+    std::ifstream f("test/persist_tmp.json");
+    std::stringstream ss;
+    ss << f.rdbuf();
+    const std::string content = ss.str();
+    EXPECT(content.find("\"representatives\"") != std::string::npos,
+           "file should contain representatives field");
+    EXPECT(content.find("4003") != std::string::npos,
+           "representatives should reference type 4003");
+  }
+
+  EXPECT(mgr.loadInstances("test/persist_tmp.json"),
+         "loadInstances should succeed");
+
+  // 覆盖合并后 uuid 应稳定、组件值保留
+  auto *loaded = mgr.getInstance(uuid);
+  EXPECT(loaded != nullptr, "instance should be found after roundtrip");
+  if (loaded) {
+    EXPECT_EQ(loaded->getTypeID(), 4001);
+    auto *lc = loaded->getComponent<CounterComponent>(30);
+    EXPECT(lc != nullptr, "loaded Counter(30) should exist");
+    if (lc)
+      EXPECT_EQ(lc->getCounter(), 7);
+  }
+}
+
+// ===================== 测试 8: 代表物共享（ADR-0003） =====================
+// 依赖构建宏 REP_SEMANTIC_OPTIMIZATION（默认 ON）；关闭时每次独立实例
+static void test_representative_shared() {
+  TEST("representative_shared");
+
+  auto &mgr = EntityManager::getManager();
+  mgr.reload("test/test_items.json");
+
+  // 4003 无 defaults（组件容器空）→ 应命中代表物共享
+  auto *a = mgr.createInstance(4003);
+  auto *b = mgr.createInstance(4003);
+  EXPECT(a != nullptr && b != nullptr, "4003 should create instances");
+  if (a && b) {
+    EXPECT(a == b, "defaults-empty type should share representative instance");
+  }
+}
+
 // ===================== main =====================
 int main() {
   std::cout << "=== EntityManager Tests ===" << std::endl;
@@ -206,6 +277,8 @@ int main() {
   test_create_instance();
   test_get_and_destroy();
   test_handler_register();
+  test_persistence_roundtrip();
+  test_representative_shared();
 
   std::cout << "\n=== Results: " << g_passed << " passed, " << g_failed
             << " failed ===" << std::endl;
