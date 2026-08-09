@@ -169,7 +169,13 @@ struct Matrix3x3 {
 
 // ============================ 自由函数 ============================
 
-/// 绕 X 轴旋转矩阵（弧度，右手系：up → forward）
+/**
+ * @brief 创建绕x轴的 旋转矩阵
+ *
+ * @param angleRad 从y正半轴逆时针旋转弧度
+ * @return constexpr Matrix3x3
+ * @details 在 xz 平面旋转
+ */
 constexpr Matrix3x3 rotationX(float angleRad) {
   Matrix3x3 result;
   const float c = std::cos(angleRad);
@@ -181,7 +187,13 @@ constexpr Matrix3x3 rotationX(float angleRad) {
   return result;
 }
 
-/// 绕 Y 轴旋转矩阵（弧度，右手系：right → back）
+/**
+ * @brief 创建绕y轴的 旋转矩阵
+ *
+ * @param angleRad 从x正半轴逆时针旋转弧度
+ * @return constexpr Matrix3x3
+ * @details 在 xz 平面旋转
+ */
 constexpr Matrix3x3 rotationY(float angleRad) {
   Matrix3x3 result;
   const float c = std::cos(angleRad);
@@ -194,17 +206,17 @@ constexpr Matrix3x3 rotationY(float angleRad) {
 }
 
 /**
- * @brief 创建2D旋转矩阵
+ * @brief 创建绕z轴的 旋转矩阵
  *
- * @param angleRad 从x正半轴逆时针旋转角度
+ * @param angleRad 从x正半轴逆时针旋转弧度
  * @return constexpr Matrix3x3
- * @details 2D 平面旋转 = 3D 绕 Z 轴旋转限制在 xy 平面（w 分量不变），
- *  直接复用 rotationZ。
- *  原向量长度L, 夹角alpha, 旋转后向量与原向量夹角theta
- *  x' = Lcos(theta+alpha) = Lcos(theta)cos(alpha) + Lsin(theta)sin(alpha)
- *  = cos(theta)x + sin(theta)y
- *  y' = Lsin(theta+alpha) = Lsin(theta)cos(alpha) - Lcos(theta)sin(alpha)
- *  = sin(theta)x - cos(theta)y
+ * @details 在 xy 平面旋转（标准逆时针，右手系，行列式 +1）
+ *  原向量 (x,y) = (Lcosα, Lsinα)，逆时针旋转 θ 后：
+ *  x' = L·cos(α+θ) = L(cosα·cosθ − sinα·sinθ) = x·cosθ − y·sinθ
+ *  y' = L·sin(α+θ) = L(sinα·cosθ + cosα·sinθ) = x·sinθ + y·cosθ
+ *  矩阵（列向量约定 v' = M·v）：
+ *  [ cosθ  −sinθ ]
+ *  [ sinθ   cosθ ]
  */
 constexpr Matrix3x3 rotationZ(float angleRad) {
   Matrix3x3 result;
@@ -236,12 +248,8 @@ constexpr Matrix3x3 scale3x3(const Vector3 &s) {
  * @param angleRad 从x正半轴逆时针旋转角度
  * @return constexpr Matrix3x3
  * @details 2D 平面旋转 = 3D 绕 Z 轴旋转限制在 xy 平面（w 分量不变），
- *  直接复用 rotationZ。
- *  原向量长度L, 夹角alpha, 旋转后向量与原向量夹角theta
- *  x' = Lcos(theta+alpha) = Lcos(theta)cos(alpha) + Lsin(theta)sin(alpha)
- *  = cos(theta)x + sin(theta)y
- *  y' = Lsin(theta+alpha) = Lsin(theta)cos(alpha) - Lcos(theta)sin(alpha)
- *  = sin(theta)x - cos(theta)y
+ *  直接复用 rotationZ。推导见 rotationZ：
+ *  x' = x·cosθ − y·sinθ，y' = x·sinθ + y·cosθ（行列式 +1，非镜像）
  */
 constexpr Matrix3x3 rotation2D(float angleRad) { return rotationZ(angleRad); }
 
