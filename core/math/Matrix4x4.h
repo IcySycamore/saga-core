@@ -279,12 +279,13 @@ inline Matrix4x4 perspective(float fovY, float aspect, float near, float far) {
 }
 
 /**
- * @brief 视图矩阵：lookAt
- * @note eye == target 或 up // forward 时返回单位矩阵
+ * @brief 视图矩阵：lookAt（把世界搬到相机脚下并转正朝向）
+ * @param eye 相机位置
+ * @param target 观察目标
+ * @param up 头顶方向（用于摆正画面）
+ * @return 4x4 视图矩阵 V
+ * @note eye == target 或 up ∥ forward 时返回单位矩阵
  * @note 右手系
- * @param m_eye 世界坐标系相机位置
- * @param m_target 世界坐标系目标位置
- * @param m_
  */
 inline Matrix4x4 lookAt(const Vector3 &eye, const Vector3 &target,
                         const Vector3 &up) {

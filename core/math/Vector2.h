@@ -24,8 +24,10 @@ struct Vector2 {
   // ============================ 静态常量 ============================
 
   static constexpr Vector2 zero() { return Vector2(0.0f, 0.0f); }
-  /// 全 1 向量
-  /// 需要单位长度向量请用 up/down/left/right
+  /**
+   * @brief 全 1 向量
+   * @note 需要单位长度向量请用 up/down/left/right
+   */
   static constexpr Vector2 one() { return Vector2(1.0f, 1.0f); }
   static constexpr Vector2 up() { return Vector2(0.0f, 1.0f); }
   static constexpr Vector2 down() { return Vector2(0.0f, -1.0f); }

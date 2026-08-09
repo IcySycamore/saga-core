@@ -149,8 +149,12 @@ inline void normalize(Vector3 &v) {
   v *= 1.0f / std::sqrt(lenSq);
 }
 
-/// 钳制向量长度到 maxLen。零向量安全
-/// @note maxLen < 0 按 0 处理
+/**
+ * @brief 钳制向量长度到 maxLen，零向量安全
+ * @param v 输入向量
+ * @param maxLen 最大长度（< 0 按 0 处理）
+ * @return 钳制后的向量
+ */
 constexpr Vector3 clampMagnitude(const Vector3 &v, float maxLen) {
   assert(maxLen >= 0.0f && "clampMagnitude: maxLen must be non-negative");
   const float clampedMax = maxLen < 0.0f ? 0.0f : maxLen;

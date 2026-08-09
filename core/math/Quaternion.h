@@ -26,8 +26,12 @@ struct Quaternion {
   constexpr Quaternion(float x_, float y_, float z_, float w_)
       : x(x_), y(y_), z(z_), w(w_) {}
 
-  /// 轴角构造（axis 会归一化；零轴返回单位四元数）
-  /// @note 依赖 sin/cos/sqrt
+  /**
+   * @brief 轴角构造（axis 会归一化；零轴返回单位四元数）
+   * @param axis 旋转轴（任意长度，会被归一化）
+   * @param angleRad 旋转角度（弧度）
+   * @note 依赖 sin/cos/sqrt
+   */
   inline Quaternion(const Vector3 &axis, float angleRad) {
     const float lenSq = lCYC::math::lengthSquared(axis); // Vector3 自由函数
     if (lenSq == 0.0f) {
@@ -127,9 +131,15 @@ constexpr float dot(const Quaternion &a, const Quaternion &b) {
   return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 
-/// 欧拉角构造
-/// @note 万向锁：pitch = ±90° 时 yaw/roll 不可唯一分解
-/// 构造无歧义，但 quatToEuler 提取时会奇异，见 TransformTools
+/**
+ * @brief 欧拉角构造（ZYX 顺序，先绕 X 再 Y 再 Z）
+ * @param pitchX 俯仰角（绕 X，弧度）
+ * @param yawY 偏航角（绕 Y，弧度）
+ * @param rollZ 翻滚角（绕 Z，弧度）
+ * @return 对应四元数
+ * @note 万向锁：pitch = ±90° 时 yaw/roll 不可唯一分解；
+ *       构造无歧义，但 quatToEuler 提取时会奇异，见 TransformTools
+ */
 inline Quaternion euler(float pitchX, float yawY, float rollZ) {
   const float cx = std::cos(pitchX * 0.5f);
   const float sx = std::sin(pitchX * 0.5f);
@@ -145,8 +155,13 @@ inline Quaternion euler(float pitchX, float yawY, float rollZ) {
   );
 }
 
-/// 球面线性插值（最短路径，双倍角处理）
-/// @note t 会被钳制到 [0,1]（超出视为外推的调用方错误）
+/**
+ * @brief 球面线性插值（最短路径，双倍角处理）
+ * @param a 起始四元数
+ * @param b 结束四元数
+ * @param t 插值参数 [0,1]（超出会被钳制）
+ * @return 插值结果（单位四元数）
+ */
 inline Quaternion slerp(const Quaternion &a, const Quaternion &b, float t) {
   // 钳制 t 到 [0,1]：slerp 语义是插值而非外推
   t = std::clamp(t, 0.0f, 1.0f);
@@ -174,9 +189,13 @@ inline Quaternion slerp(const Quaternion &a, const Quaternion &b, float t) {
                     a.z * wa + b2.z * wb, a.w * wa + b2.w * wb);
 }
 
-/// 朝向构造：让 forward 指向目标方向，up 指定上方向（世界系）
-/// 万向锁防御：forward 与 up 平行时用 worldUp 替代
-/// 约定：构造的旋转把世界 forward(+Z) 映射到目标 forward
+/**
+ * @brief 朝向构造：让 forward 指向目标方向，up 指定上方向
+ * @param forward 目标朝向（会被归一化；零向量返回单位四元数）
+ * @param up 上方向参考（与 forward 平行时自动重选）
+ * @return 旋转四元数
+ * @note 约定：构造的旋转把世界 forward(+Z) 映射到目标 forward
+ */
 inline Quaternion lookRotation(const Vector3 &forward, const Vector3 &up) {
   const Vector3 f = normalized(forward);
   if (lengthSquared(f) == 0.0f) {

@@ -441,7 +441,7 @@ static void test_quaternion_axis_angle() {
 
   // 绕 Z 轴旋转 90°
   auto q = lCYC::math::Quaternion(lCYC::math::Vector3::forward(),
-                                 lCYC::math::HALF_PI);
+                                  lCYC::math::HALF_PI);
   auto v = q * lCYC::math::Vector3::right();
   EXPECT_NEAR(v.x, 0.0f, 1e-5f);
   EXPECT_NEAR(v.y, 1.0f, 1e-5f);
@@ -469,7 +469,7 @@ static void test_quaternion_composition() {
 
   // 先绕 Z 转 90° 再绕 X 转 90° = 复合
   auto qz = lCYC::math::Quaternion(lCYC::math::Vector3::forward(),
-                                  lCYC::math::HALF_PI);
+                                   lCYC::math::HALF_PI);
   auto qx =
       lCYC::math::Quaternion(lCYC::math::Vector3::right(), lCYC::math::HALF_PI);
 
@@ -486,7 +486,7 @@ static void test_quaternion_inverse() {
   TEST("M4_inverse");
 
   auto q = lCYC::math::Quaternion(lCYC::math::Vector3::up(),
-                                 lCYC::math::deg2rad(60.0f));
+                                  lCYC::math::deg2rad(60.0f));
   auto inv = q.inverse();
 
   // q * q⁻¹ = 单位
@@ -531,7 +531,7 @@ static void test_quaternion_slerp() {
 
   auto q0 = lCYC::math::Quaternion::identity();
   auto q1 = lCYC::math::Quaternion(lCYC::math::Vector3::forward(),
-                                  lCYC::math::HALF_PI);
+                                   lCYC::math::HALF_PI);
 
   // t=0 → q0
   auto s0 = lCYC::math::slerp(q0, q1, 0.0f);
@@ -649,7 +649,7 @@ static void test_mat4_rotation() {
 
   // 绕 Z 轴 90°（与 Quaternion 一致）
   auto q = lCYC::math::Quaternion(lCYC::math::Vector3::forward(),
-                                 lCYC::math::HALF_PI);
+                                  lCYC::math::HALF_PI);
   auto rot = lCYC::math::rotation(q);
 
   auto v = rot * lCYC::math::Vector3::right();
@@ -842,7 +842,7 @@ static void test_mat3_rotation() {
 
   // 四元数构造矩阵与绕轴一致
   auto q = lCYC::math::Quaternion(lCYC::math::Vector3::forward(),
-                                 lCYC::math::HALF_PI);
+                                  lCYC::math::HALF_PI);
   auto mq = lCYC::math::rotation3x3(q);
   auto vq = mq * lCYC::math::Vector3::right();
   EXPECT_NEAR(vq.x, 0.0f, 1e-5f);
@@ -892,7 +892,7 @@ static void test_mat3_4x4_convert() {
   auto m4 = lCYC::math::translation(lCYC::math::Vector3(1.0f, 2.0f, 3.0f)) *
             lCYC::math::rotation(lCYC::math::Quaternion(
                 lCYC::math::Vector3::forward(), lCYC::math::HALF_PI));
-  auto m3 = lCYC::math::fromMatrix4x4(m4);
+  auto m3 = lCYC::math::toMatrix3x3(m4);
   // 3x3 提取应保留旋转部分
   auto v = m3 * lCYC::math::Vector3::right();
   EXPECT_NEAR(v.x, 0.0f, 1e-5f);
@@ -922,10 +922,11 @@ static void test_mat3_normal_matrix() {
 static void test_trs() {
   TEST("M7_trs");
 
-  auto m = lCYC::math::trs(lCYC::math::Vector3(10.0f, 20.0f, 30.0f),
-                           lCYC::math::Quaternion(lCYC::math::Vector3::forward(),
-                                                 lCYC::math::HALF_PI),
-                           lCYC::math::Vector3(2.0f, 2.0f, 2.0f));
+  auto m =
+      lCYC::math::trs(lCYC::math::Vector3(10.0f, 20.0f, 30.0f),
+                      lCYC::math::Quaternion(lCYC::math::Vector3::forward(),
+                                             lCYC::math::HALF_PI),
+                      lCYC::math::Vector3(2.0f, 2.0f, 2.0f));
   // 先缩放再旋转再平移: v=(1,0,0) → scale(2,0,0) → rot(0,2,0) → trans(10,22,30)
   auto v = m * lCYC::math::Vector3(1.0f, 0.0f, 0.0f);
   EXPECT_NEAR(v.x, 10.0f, 1e-5f);
@@ -940,7 +941,7 @@ static void test_decompose() {
   lCYC::math::Quaternion rot;
   auto m = lCYC::math::trs(lCYC::math::Vector3(1.0f, 2.0f, 3.0f),
                            lCYC::math::Quaternion(lCYC::math::Vector3::up(),
-                                                 lCYC::math::deg2rad(45.0f)),
+                                                  lCYC::math::deg2rad(45.0f)),
                            lCYC::math::Vector3(2.0f, 3.0f, 4.0f));
 
   bool ok = lCYC::math::decomposeTRS(m, pos, rot, scale);
@@ -956,7 +957,7 @@ static void test_decompose() {
   EXPECT_NEAR(scale.z, 4.0f, 1e-4f);
   // 旋转还原（与原始一致）
   auto orig = lCYC::math::Quaternion(lCYC::math::Vector3::up(),
-                                    lCYC::math::deg2rad(45.0f));
+                                     lCYC::math::deg2rad(45.0f));
   EXPECT(std::abs(lCYC::math::dot(rot, orig)) > 0.999f,
          "rotation should be restored (up to sign)");
 
@@ -998,8 +999,8 @@ static void test_transform_point_direction() {
 
   auto m = lCYC::math::trs(lCYC::math::Vector3(10.0f, 0.0f, 0.0f),
                            lCYC::math::Quaternion::identity());
-  // transformPoint 带平移
-  auto p = lCYC::math::transformPoint(m, lCYC::math::Vector3(1.0f, 2.0f, 3.0f));
+  // 变换点带平移（Matrix4x4::operator* 已是齐次 w=1）
+  auto p = m * lCYC::math::Vector3(1.0f, 2.0f, 3.0f);
   EXPECT_NEAR(p.x, 11.0f, 1e-6f);
   // transformDirection 不带平移
   auto d =
@@ -1011,8 +1012,8 @@ static void test_rotate_vector() {
   TEST("M7_rotateVector");
 
   auto q = lCYC::math::Quaternion(lCYC::math::Vector3::forward(),
-                                 lCYC::math::HALF_PI);
-  auto v = lCYC::math::rotateVector(q, lCYC::math::Vector3::right());
+                                  lCYC::math::HALF_PI);
+  auto v = q * lCYC::math::Vector3::right(); // Quaternion::operator*
   EXPECT_NEAR(v.x, 0.0f, 1e-5f);
   EXPECT_NEAR(v.y, 1.0f, 1e-5f);
 }
