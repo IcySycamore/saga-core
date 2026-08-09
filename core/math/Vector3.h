@@ -3,13 +3,12 @@
 #include <cmath>
 #include <string>
 
-namespace math {
+namespace lCYC::math {
 
 /**
  * @brief 三维向量连续空间
- * @note  内存布局: 3 × float = 12 字节，SIMD 友好, C++20，constexpr 优先，无
- RTTI
- * @namespace math
+ * @note  内存布局: 3 × float = 12 字节
+ * @namespace lCYC::math
  */
 struct Vector3 {
   float x;
@@ -26,7 +25,6 @@ struct Vector3 {
 
   static constexpr Vector3 zero() { return Vector3(0.0f, 0.0f, 0.0f); }
   /// 全 1 向量
-  /// 需要单位长度向量请用 up/down/left/right/forward/back
   static constexpr Vector3 one() { return Vector3(1.0f, 1.0f, 1.0f); }
   static constexpr Vector3 up() { return Vector3(0.0f, 1.0f, 0.0f); }
   static constexpr Vector3 down() { return Vector3(0.0f, -1.0f, 0.0f); }
@@ -57,7 +55,6 @@ struct Vector3 {
   constexpr Vector3 operator*(float scalar) const {
     return Vector3(x * scalar, y * scalar, z * scalar);
   }
-  /// 分量逐乘（Hadamard 积）：(a.x*b.x, a.y*b.y, a.z*b.z)，用于缩放/颜色
   constexpr Vector3 operator*(const Vector3 &rhs) const {
     return Vector3(x * rhs.x, y * rhs.y, z * rhs.z);
   }
@@ -134,7 +131,7 @@ constexpr float distance(const Vector3 &a, const Vector3 &b) {
   return length(a - b);
 }
 
-/// 归一化副本。零向量安全：返回零向量
+/// 归一化副本。零向量：返回零向量
 constexpr Vector3 normalized(const Vector3 &v) {
   const float lenSq = lengthSquared(v);
   if (lenSq == 0.0f || lenSq == 1.0f) {
@@ -143,7 +140,7 @@ constexpr Vector3 normalized(const Vector3 &v) {
   return v * (1.0f / std::sqrt(lenSq));
 }
 
-/// 就地归一化。零向量安全：归零
+/// 就地归一化。零向量：归零
 inline void normalize(Vector3 &v) {
   const float lenSq = lengthSquared(v);
   if (lenSq == 0.0f || lenSq == 1.0f) {
@@ -152,8 +149,12 @@ inline void normalize(Vector3 &v) {
   v *= 1.0f / std::sqrt(lenSq);
 }
 
-/// 钳制向量长度到 maxLen（不改变方向）。零向量安全
-/// @note maxLen < 0 按 0 处理（assert 提示）
+/**
+ * @brief 钳制向量长度到 maxLen，零向量安全
+ * @param v 输入向量
+ * @param maxLen 最大长度（< 0 按 0 处理）
+ * @return 钳制后的向量
+ */
 constexpr Vector3 clampMagnitude(const Vector3 &v, float maxLen) {
   assert(maxLen >= 0.0f && "clampMagnitude: maxLen must be non-negative");
   const float clampedMax = maxLen < 0.0f ? 0.0f : maxLen;
@@ -164,7 +165,7 @@ constexpr Vector3 clampMagnitude(const Vector3 &v, float maxLen) {
   return v;
 }
 
-/// 两向量夹角（弧度），[0, π]。零向量返回 0
+/// 两向量弧度角，[0, π]。零向量返回 0
 constexpr float angle(const Vector3 &a, const Vector3 &b) {
   const float lenSqA = lengthSquared(a);
   const float lenSqB = lengthSquared(b);
@@ -186,4 +187,4 @@ constexpr Vector3 operator*(float scalar, const Vector3 &v) {
   return v * scalar;
 }
 
-} // namespace math
+} // namespace lCYC::math

@@ -1,7 +1,7 @@
 # 渲染 MVP 实现规划（SDL2 + OpenGL / 软光栅双后端）
 
 > 关联：issue #13（图形 API 抽象层）、#14（Camera）、#15（场景图）、#16（基础渲染循环）、#17（主循环整合）
-> 前置：`core/math`（M1-M7，301 断言已绿）、`clockns::Clock`（时间系统，25 断言已绿）、SDL2（zlib 许可，已安装）
+> 前置：`core/math`（M1-M7，301 断言已绿）、`lCYC::clock::Clock`（时间系统，25 断言已绿）、SDL2（zlib 许可，已安装）
 
 ---
 
@@ -12,10 +12,10 @@
 可交付物：
 
 1. 一个可运行的窗口程序（`render_demo`）：SDL2 窗口 + 可交互 3D 场景
-2. 一个可测试的软件光栅化后端（`SoftwareBackend`）：CPU 渲染到帧缓冲，可单测
-3. 一个 OpenGL 后端（`OpenGLBackend`）：GPU 渲染，作为实际显示后端
+2. 一个可测试的软件光栅化后端（`SoftwareDevice`）：CPU 渲染到帧缓冲，可单测
+3. 一个 OpenGL 后端（`OpenGLDevice`）：GPU 渲染，作为实际显示后端
 4. 可替换后端的渲染抽象层（`RenderDevice` + `RenderServer`）
-5. 主循环整合：`clockns::Clock` 驱动逻辑 tick + 独立渲染帧
+5. 主循环整合：`lCYC::clock::Clock` 驱动逻辑 tick + 独立渲染帧
 
 **非目标（YAGNI）**：不实现光照/阴影/纹理/材质/粒子/动画——它们是后续 issue。
 
@@ -36,8 +36,8 @@
                │ 后端接口
 ┌──────────────▼─────────────────────────────────┐
 │ 图形抽象层  RenderDevice（core/render/）        │
-│  ├── SoftwareBackend：CPU 光栅化 → 帧缓冲（可测）│
-│  └── OpenGLBackend：GPU → SDL2 窗口（显示）     │
+│  ├── SoftwareDevice：CPU 光栅化 → 帧缓冲（可测）│
+│  └── OpenGLDevice：GPU → SDL2 窗口（显示）     │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -77,8 +77,8 @@
 ```
 core/render/
   RenderDevice.h       // RenderDevice 纯接口（底层设备抽象）
-  SoftwareBackend.h    // 软光栅（framebuffer + depthBuffer）
-  OpenGLBackend.h      // OpenGL 后端
+  SoftwareDevice.h    // 软光栅（framebuffer + depthBuffer）
+  OpenGLDevice.h      // OpenGL 后端
   RenderServer.h       // 命令队列 + 设备调度
   SceneGraph.h         // Transform 树（local/world 矩阵）
   Camera.h             // 相机（位置/朝向/投影）
@@ -94,7 +94,7 @@ test/
 
 ```cpp
 // core/render/RenderDevice.h —— 纯接口，逻辑层唯一接触的图形面（对应 Godot RenderingDevice / Unreal RHI）
-namespace render {
+namespace lCYC::render {
 
 // 不透明窗口句柄：封装平台类型，避免裸 void*（类型安全）
 struct NativeWindowHandle {
@@ -108,8 +108,8 @@ inline constexpr MeshHandle kInvalidMesh = ~0u;
 
 // 顶点格式：支持位置+颜色；未来加法线/UV 只需扩展字段
 struct Vertex {
-  math::Vector3 pos;
-  math::Vector3 color;   // 或 uint32_t 打包（RGBA）
+  lCYC::math::Vector3 pos;
+  lCYC::math::Vector3 color;   // 或 uint32_t 打包（RGBA）
 };
 
 class RenderDevice {
@@ -129,8 +129,8 @@ public:
   virtual void destroyMesh(MeshHandle h) = 0;
 
   // ---- 绘制（引用句柄 + 变换，不传裸数据）----
-  virtual void drawMesh(MeshHandle h, const math::Matrix4x4& mvp) = 0;
-  virtual void drawGrid(float size, int divs, const math::Matrix4x4& vp) = 0;
+  virtual void drawMesh(MeshHandle h, const lCYC::math::Matrix4x4& mvp) = 0;
+  virtual void drawGrid(float size, int divs, const lCYC::math::Matrix4x4& vp) = 0;
 };
 
 } // namespace render
@@ -138,7 +138,7 @@ public:
 
 ```cpp
 // core/render/SceneGraph.h —— Transform 树（唯一所有权，句柄安全）
-namespace render {
+namespace lCYC::render {
 
 class SceneGraph {
 public:
@@ -154,21 +154,21 @@ public:
   bool isValid(NodeId id) const;
 
   // ---- 局部变换（setter 置脏）----
-  void setLocalPos(NodeId id, const math::Vector3& p);
-  void setLocalRot(NodeId id, const math::Quaternion& q);
-  void setLocalScale(NodeId id, const math::Vector3& s);
+  void setLocalPos(NodeId id, const lCYC::math::Vector3& p);
+  void setLocalRot(NodeId id, const lCYC::math::Quaternion& q);
+  void setLocalScale(NodeId id, const lCYC::math::Vector3& s);
 
   // ---- 世界矩阵（脏标记 + 缓存，惰性重算）----
-  const math::Matrix4x4& world(NodeId id) const;
+  const lCYC::math::Matrix4x4& world(NodeId id) const;
 
 private:
   struct Node {
-    math::Vector3    localPos{0,0,0};
-    math::Quaternion localRot{};
-    math::Vector3    localScale{1,1,1};
+    lCYC::math::Vector3    localPos{0,0,0};
+    lCYC::math::Quaternion localRot{};
+    lCYC::math::Vector3    localScale{1,1,1};
     NodeId parent = kInvalidNode;
     mutable bool dirty = true;
-    mutable math::Matrix4x4 worldCache;
+    mutable lCYC::math::Matrix4x4 worldCache;
   };
   std::vector<Node>  m_nodes;   // 句柄 = 索引
   std::vector<NodeId> m_free;   // 空闲回收
@@ -179,7 +179,7 @@ private:
 
 ```cpp
 // core/render/Camera.h —— 视图 + 投影（不变量经 setter 保护）
-namespace render {
+namespace lCYC::render {
 
 class Camera {
 public:
@@ -189,16 +189,16 @@ public:
   void setPerspective(float fovY, float near_, float far_);
   void setOrthographic(float l, float r, float b, float t, float near_, float far_);
   void setProj(Proj p);
-  void lookAt(const math::Vector3& eye, const math::Vector3& target,
-              const math::Vector3& up = math::Vector3::up());
+  void lookAt(const lCYC::math::Vector3& eye, const lCYC::math::Vector3& target,
+              const lCYC::math::Vector3& up = lCYC::math::Vector3::up());
 
-  math::Matrix4x4 view() const;         // lookAt
-  math::Matrix4x4 projection(float aspect) const;
+  lCYC::math::Matrix4x4 view() const;         // lookAt
+  lCYC::math::Matrix4x4 projection(float aspect) const;
 
 private:
   Proj m_proj = Proj::Perspective;
-  math::Vector3 m_eye{0,0,5}, m_target{0,0,0}, m_up{0,1,0};
-  float m_fovY = 60.0f * math::PI / 180.0f;
+  lCYC::math::Vector3 m_eye{0,0,5}, m_target{0,0,0}, m_up{0,1,0};
+  float m_fovY = 60.0f * lCYC::math::PI / 180.0f;
   float m_near = 0.1f, m_far = 100.0f;
   // 正交参数（Proj==Orthographic 时有效）
   float m_l=-1, m_r=1, m_b=-1, m_t=1;
@@ -209,7 +209,7 @@ private:
 
 ```cpp
 // core/render/RenderServer.h —— 命令队列（逻辑层唯一入口，所有权明确）
-namespace render {
+namespace lCYC::render {
 
 class RenderServer {
 public:
@@ -223,13 +223,13 @@ public:
   void endFrame();
 
   // ---- 命令收集（只存句柄+变换，不存数据）----
-  void drawMesh(MeshHandle h, const math::Matrix4x4& model);
+  void drawMesh(MeshHandle h, const lCYC::math::Matrix4x4& model);
 
   // ---- 执行（命令池预分配复用，避免每帧 new）----
   void render();
 
 private:
-  struct DrawCmd { MeshHandle mesh; math::Matrix4x4 model; };
+  struct DrawCmd { MeshHandle mesh; lCYC::math::Matrix4x4 model; };
   RenderDevice* m_backend = nullptr;
   std::vector<DrawCmd> m_cmds;   // 复用，不清容量
   Camera m_cam;                  // 每帧 beginFrame 快照
@@ -241,7 +241,7 @@ private:
 
 ### 3.3 软件光栅化要点（对应教学第 6 讲）
 
-- `SoftwareBackend` 持 `std::vector<uint32_t> m_framebuffer` + `std::vector<float> m_depthBuffer`
+- `SoftwareDevice` 持 `std::vector<uint32_t> m_framebuffer` + `std::vector<float> m_depthBuffer`
 - `drawMesh`：把顶点 MVP 变换 → 屏幕坐标，按教学 6.7 伪代码光栅化（重心坐标 + 深度测试）
 - 线框模式：先画三角形边（Bresenham 直线），MVP 变换后连线
 - **可测试性**：渲染已知三角形 → 断言帧缓冲像素颜色/深度
@@ -277,7 +277,7 @@ while (running) {
 | 线框立方体      | 12 条边，MVP 变换 + 旋转动画                              |
 | 多物体          | 几个立方体不同位置/大小（验证 M 矩阵）                    |
 | 深度测试        | 立方体互相遮挡正确（软光栅断言 + OpenGL 默认开启）        |
-| 后端切换        | 运行时按键切换 SoftwareBackend ↔ OpenGLBackend            |
+| 后端切换        | 运行时按键切换 SoftwareDevice ↔ OpenGLDevice              |
 | 逻辑 tick       | Clock 固定步长驱动旋转动画，渲染帧独立                    |
 
 ## 5. 验收规则
@@ -320,8 +320,8 @@ while (running) {
 | 里程碑 | 内容                                | 验收                       |
 | ------ | ----------------------------------- | -------------------------- |
 | M1     | RenderDevice 接口 + SDL2 空窗口     | 窗口出现、可关窗           |
-| M2     | SoftwareBackend 画网格线            | 软光栅可见网格             |
+| M2     | SoftwareDevice 画网格线             | 软光栅可见网格             |
 | M3     | Camera + MVP 串联（正交/透视）      | 网格随相机变化正确         |
 | M4     | 线框立方体 + 旋转 + 深度测试        | 多立方体遮挡正确           |
-| M5     | OpenGLBackend 同样内容              | 双后端画面一致             |
+| M5     | OpenGLDevice 同样内容               | 双后端画面一致             |
 | M6     | RenderServer + Engine 主循环 + 输入 | 完整可交互 demo + 测试全绿 |

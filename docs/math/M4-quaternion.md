@@ -16,7 +16,7 @@
 - [ ] `struct Quaternion { float x, y, z, w; }`（默认单位四元数 `{0,0,0,1}`）
 - [ ] 运算符：`*`(四元数乘，旋转合成) `*`(乘 Vector3，旋转向量) `==` `!=`
 - [ ] `identity()` 静态常量
-- [ ] `axisAngle(axis, angleRad)` 构造（归一化 axis，零轴安全）
+- [ ] `Quaternion(axis, angleRad)` 轴角构造函数（归一化 axis，零轴安全）
 - [ ] `euler(pitch, yaw, roll)` 构造（弧度）
 - [ ] `toEuler()` / `toMatrix4x4()`（转换，在 M5 完成前可声明）
 - [ ] `normalized()` / `normalize()`（零四元数安全）
@@ -24,7 +24,7 @@
 - [ ] `dot(a,b)`（球面插值用）
 - [ ] `slerp(a, b, t)`（球面线性插值，处理最短路径 + 双倍角）
 - [ ] `lookRotation(forward, up)`（朝向，供 M7/Camera 用）
-- [ ] 命名空间 `math::`
+- [ ] 命名空间 `lCYC::math::`
 
 ## 性能
 

@@ -1,27 +1,26 @@
 #pragma once
 /**
  * @brief 相机
- * @namespace render
+ * @namespace lCYC::render
  * @note 职责:
  *   - 位置/朝向（lookAt）→ 视图矩阵 V
  *   - 投影类型（透视/正交）→ 投影矩阵 P
  *   - MVP = P * V * M 的 V 和 P 部分
- * @note C++20
  */
 
 #include "core/math/Math.h"
 #include "core/math/Matrix4x4.h"
 #include "core/math/Vector3.h"
 
-namespace render {
+namespace lCYC::render {
 enum class Proj { Perspective, Orthographic };
 class Camera {
 private:
   Proj m_proj = Proj::Perspective;
-  math::Vector3 m_eye{0.0f, 0.0f, 5.0f};
-  math::Vector3 m_target{0.0f, 0.0f, 0.0f};
-  math::Vector3 m_up{0.0f, 1.0f, 0.0f};
-  float m_fovY = 60.0f * math::PI / 180.0f;
+  lCYC::math::Vector3 m_eye{0.0f, 0.0f, 5.0f};
+  lCYC::math::Vector3 m_target{0.0f, 0.0f, 0.0f};
+  lCYC::math::Vector3 m_up{0.0f, 1.0f, 0.0f};
+  float m_fovY = 60.0f * lCYC::math::PI / 180.0f;
   float m_near = 0.1f;
   float m_far = 100.0f;
   float m_l = -1.0f, m_r = 1.0f, m_b = -1.0f, m_t = 1.0f;
@@ -65,8 +64,8 @@ public:
    * @param target 观察目标点
    * @param up 头顶方向，用于摆正画面（默认世界向上）
    */
-  void lookAt(const math::Vector3 &eye, const math::Vector3 &target,
-              const math::Vector3 &up = math::Vector3::up()) {
+  void lookAt(const lCYC::math::Vector3 &eye, const lCYC::math::Vector3 &target,
+              const lCYC::math::Vector3 &up = lCYC::math::Vector3::up()) {
     m_eye = eye;
     m_target = target;
     m_up = up;
@@ -75,18 +74,18 @@ public:
    * @brief 生成视图矩阵 V
    * @return 4×4 视图矩阵
    */
-  math::Matrix4x4 view() const { return math::lookAt(m_eye, m_target, m_up); }
+  lCYC::math::Matrix4x4 view() const { return lCYC::math::lookAt(m_eye, m_target, m_up); }
 
   /**
    * @brief 生成投影矩阵 P
    * @param aspect 宽高比（width/height）
    * @return 4×4 投影矩阵 按投影类型
    */
-  math::Matrix4x4 projection(float aspect) const {
+  lCYC::math::Matrix4x4 projection(float aspect) const {
     if (m_proj == Proj::Perspective) {
-      return math::perspective(m_fovY, aspect, m_near, m_far);
+      return lCYC::math::perspective(m_fovY, aspect, m_near, m_far);
     }
-    return math::orthographic(m_l, m_r, m_b, m_t, m_near, m_far);
+    return lCYC::math::orthographic(m_l, m_r, m_b, m_t, m_near, m_far);
   }
 
   /**
@@ -94,16 +93,16 @@ public:
    * @param aspect 宽高比（width/height）
    * @return 4×4 视图投影矩阵
    */
-  math::Matrix4x4 viewProjection(float aspect) const {
+  lCYC::math::Matrix4x4 viewProjection(float aspect) const {
     return projection(aspect) * view();
   }
 
   /** @brief 当前投影类型 */
   Proj projectionType() const { return m_proj; }
   /** @brief 相机位置 */
-  const math::Vector3 &eye() const { return m_eye; }
+  const lCYC::math::Vector3 &eye() const { return m_eye; }
   /** @brief 目标点 */
-  const math::Vector3 &target() const { return m_target; }
+  const lCYC::math::Vector3 &target() const { return m_target; }
 };
 
-} // namespace render
+} // namespace lCYC::render

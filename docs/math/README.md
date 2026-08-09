@@ -50,6 +50,6 @@ core/math/
 ## 通用约束（所有 todo 适用）
 
 - **C++20**，`constexpr` 优先，无 RTTI 依赖
-- 命名空间 `math::`，与 `boost` 隔离
+- 命名空间 `lCYC::math::`，与 `boost` 隔离
 - 测试独立编译（只链接 Boost，遵循项目约定），放 `test/test_math.cpp`
 - 修改前读相关 ADR；术语与 `CONTEXT.md` 一致

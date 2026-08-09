@@ -128,7 +128,7 @@ $$
 
 ### 3.4 朝向 = `lookAt`
 
-`math::lookAt(eye, target, up)` 返回完整 4×4 矩阵，同时含位置（平移）+ 朝向（旋转）。心里可一直叫它"摄像头矩阵"。
+`lCYC::math::lookAt(eye, target, up)` 返回完整 4×4 矩阵，同时含位置（平移）+ 朝向（旋转）。心里可一直叫它"摄像头矩阵"。
 
 ### 3.5 MVP 预告
 
@@ -142,8 +142,8 @@ $$
 | ------------------ | ----------------------------- | ----------- |
 | 4×4 矩阵 + 乘法    | `Matrix4x4` + `operator*`     | ✅ 301 断言 |
 | 齐次坐标/w 除法    | `operator*(Vector3)` 自动处理 | ✅          |
-| 平移/缩放/旋转组合 | `math::trs()`                 | ✅          |
-| 摄像头矩阵         | `math::lookAt()`              | ✅          |
+| 平移/缩放/旋转组合 | `lCYC::math::trs()`                 | ✅          |
+| 摄像头矩阵         | `lCYC::math::lookAt()`              | ✅          |
 
 ---
 
@@ -277,14 +277,14 @@ P 一次做四件事：缩放 x、缩放 y、映射 z 到 [-1,1]（供深度缓�
 ### 4.6 库已就绪
 
 ```cpp
-math::Matrix4x4 P = math::perspective(fovY, aspect, near, far);   // 透视
-math::Matrix4x4 P2 = math::orthographic(l, r, b, t, near, far);   // 正交
+lCYC::math::Matrix4x4 P = lCYC::math::perspective(fovY, aspect, near, far);   // 透视
+lCYC::math::Matrix4x4 P2 = lCYC::math::orthographic(l, r, b, t, near, far);   // 正交
 ```
 
 ### 4.7 MVP 凑齐
 
 ```cpp
-math::Matrix4x4 mvp = P * V * M;   // 从右往左：M(物体) → V(相机) → P(投影)
+lCYC::math::Matrix4x4 mvp = P * V * M;   // 从右往左：M(物体) → V(相机) → P(投影)
 ```
 
 **`mvp = P*V*M` 是整个渲染管线的数学核心。**
@@ -320,9 +320,9 @@ $$
 
 **MVP = P·V·M**（无固定闭合形式，乘积完成"模型点→裁剪坐标"）：
 
-- **M** = `math::trs(pos,rot,scale)`：物体摆进世界
-- **V** = `math::lookAt(eye,target,up)`：世界搬相机脚下 + 转正朝向（= R·T(-eye)）
-- **P** = `math::perspective(...)`：近大远小
+- **M** = `lCYC::math::trs(pos,rot,scale)`：物体摆进世界
+- **V** = `lCYC::math::lookAt(eye,target,up)`：世界搬相机脚下 + 转正朝向（= R·T(-eye)）
+- **P** = `lCYC::math::perspective(...)`：近大远小
 
 **P 有 5 个非零项（不是 4 个）**，代入 fov=60°, aspect=16/9, n=0.1, f=100：
 
@@ -386,7 +386,7 @@ $$
 ### 5.7 代码
 
 ```cpp
-// SoftwareBackend 里的深度缓冲
+// SoftwareDevice 里的深度缓冲
 std::vector<float> depthBuffer(width * height, 1.0f);  // 初始全是"无限远"
 // 深度来自 mvp 变换后的 z（Matrix4x4::operator* 已算好）
 ```
@@ -460,7 +460,7 @@ $$
 
 **"一切皆插值"**：深度、颜色、纹理坐标全是同一个 (α,β,γ)。
 
-### 6.7 完整光栅化伪代码（SoftwareBackend 核心）
+### 6.7 完整光栅化伪代码（SoftwareDevice 核心）
 
 ```cpp
 for 每个三角形 (v0,v1,v2) [屏幕坐标]:
@@ -492,10 +492,10 @@ for 每个三角形 (v0,v1,v2) [屏幕坐标]:
 
 ---
 
-# 第 7 讲：软件光栅化的完整实现（SoftwareBackend）
+# 第 7 讲：软件光栅化的完整实现（SoftwareDevice）
 
 > 前 6 讲建立的是"数学心智模型"；本讲开始，把这些数学**一行行写进 CPU 代码**。
-> 我们的实现：纯 C++ 软光栅 `core/render/SoftwareBackend.h`——不用 GPU，自己算每个像素。
+> 我们的实现：纯 C++ 软光栅 `core/render/SoftwareDevice.h`——不用 GPU，自己算每个像素。
 
 ## 7.0 为什么先做"软件光栅化"而不是直接上 OpenGL
 
@@ -536,7 +536,7 @@ for 每个三角形 (v0,v1,v2) [屏幕坐标]:
 这是第 4 讲数学的**代码落地**。核心难点：**透视除法需要 w，而 `Matrix4x4::operator*` 只返回 Vector3（丢掉了 w）**，所以这里**手动**算裁剪坐标四分量：
 
 ```cpp
-ScreenVert transformVertex(const Vertex &v, const math::Matrix4x4 &m) const {
+ScreenVert transformVertex(const Vertex &v, const lCYC::math::Matrix4x4 &m) const {
   // 裁剪坐标（含齐次 w）——手动计算以获取 w 符号
   const float cx = m[0]*v.pos.x + m[4]*v.pos.y + m[8]*v.pos.z + m[12];
   const float cy = m[1]*v.pos.x + m[5]*v.pos.y + m[9]*v.pos.z + m[13];
@@ -547,7 +547,7 @@ ScreenVert transformVertex(const Vertex &v, const math::Matrix4x4 &m) const {
     return {0.0f, 0.0f, 1.0f, toRGBA(v.color), true};
   }
   const float inv = 1.0f / cw;                 // 透视除法（÷深度）
-  const math::Vector3 ndc{cx*inv, cy*inv, cz*inv};
+  const lCYC::math::Vector3 ndc{cx*inv, cy*inv, cz*inv};
   const float sx = (ndc.x + 1.0f) * 0.5f * m_width;   // NDC [-1,1] → 屏幕像素
   const float sy = (1.0f - ndc.y) * 0.5f * m_height;  // 屏幕 y 向下，所以翻转
   const float depth = (ndc.z + 1.0f) * 0.5f;          // NDC z [-1,1] → 深度 [0,1]
@@ -601,7 +601,7 @@ uint32_t c = (a<<24) | (b<<16) | (g<<8) | r;
 std::fill(m_framebuffer.begin(), m_framebuffer.end(), 0xFF302018u);
 
 // 单像素打包（color 0..1 → 通道 0..255，R 最低字节）
-static uint32_t toRGBA(const math::Vector3 &c) {
+static uint32_t toRGBA(const lCYC::math::Vector3 &c) {
   const auto b = [](float x){ int v = (int)(x*255.f+0.5f); return (uint32_t)(v<0?0:(v>255?255:v)); };
   return (0xFFu<<24) | (b(c.z)<<16) | (b(c.y)<<8) | b(c.x);
 }
@@ -745,7 +745,7 @@ static uint32_t lerp3(uint32_t c0, uint32_t c1, uint32_t c2, float a, float b, f
 ## 7.8 drawMesh 完整流程：图元组装 + 近平面裁剪
 
 ```cpp
-void drawMesh(MeshHandle h, const math::Matrix4x4 &mvp) override {
+void drawMesh(MeshHandle h, const lCYC::math::Matrix4x4 &mvp) override {
   if (h.value >= m_meshes.size() || m_meshes[h.value].empty()) return;
   const auto &verts = m_meshes[h.value];
   const size_t n = verts.size();
@@ -799,9 +799,9 @@ int width() const; int height() const;          // 尺寸
 
 ```
 应用层（render_demo）──── 只认识 ────▶ RenderDevice（纯接口）
-                                          ├── SDL3RenderDevice（线框）
-                                          ├── SoftwareBackend（软光栅）
-                                          └── 未来：OpenGLBackend
+                                          ├── SDL3Device（线框）
+                                          ├── SoftwareDevice（软光栅）
+                                          └── 未来：OpenGLDevice
 ```
 
 ## 8.2 RenderDevice 纯接口（零 SDL 依赖）
@@ -816,8 +816,8 @@ public:
   virtual void endFrame() = 0;      // 交换缓冲/显示
   virtual MeshHandle createMesh(std::span<const Vertex> verts) = 0;
   virtual void destroyMesh(MeshHandle h) = 0;
-  virtual void drawMesh(MeshHandle h, const math::Matrix4x4& mvp) = 0;
-  virtual void drawGrid(float size, int divs, const math::Matrix4x4& vp) = 0;
+  virtual void drawMesh(MeshHandle h, const lCYC::math::Matrix4x4& mvp) = 0;
+  virtual void drawGrid(float size, int divs, const lCYC::math::Matrix4x4& vp) = 0;
 };
 ```
 
@@ -832,7 +832,7 @@ public:
 
 ### 为什么不把 SDL 写进接口
 
-`RenderDevice.h` 顶部没有 `#include <SDL3/SDL.h>`——这是硬约束。SDL3 只出现在**两个**地方：`SDL3RenderDevice.h`（后端实现）和 `render_demo.cpp`（应用层建窗口）。这样：
+`RenderDevice.h` 顶部没有 `#include <SDL3/SDL.h>`——这是硬约束。SDL3 只出现在**两个**地方：`SDL3Device.h`（后端实现）和 `render_demo.cpp`（应用层建窗口）。这样：
 
 - 引擎层可编译可测试（不依赖 SDL 环境）
 - 未来换成 OpenGL/别的窗口库，接口纹丝不动
@@ -902,7 +902,7 @@ class Camera {
   void setPerspective(float fovY, float near_, float far_);
   void setOrthographic(float l, float r, float b, float t, float near_, float far_);
   void lookAt(const Vector3& eye, const Vector3& target, const Vector3& up = Vector3::up());
-  Matrix4x4 view() const;                    // = math::lookAt(...)
+  Matrix4x4 view() const;                    // = lCYC::math::lookAt(...)
   Matrix4x4 projection(float aspect) const;  // 按类型选 P
   Matrix4x4 viewProjection(float aspect) const;  // = projection(aspect) * view()
 };
@@ -911,20 +911,71 @@ class Camera {
 **设计要点**：
 
 - **只存参数，不存矩阵**：每次 `viewProjection(aspect)` 现场算（demo 阶段矩阵生成开销可忽略；未来需要时缓存 + dirty 标记）。这样 aspect（依赖窗口/帧缓冲）可以在渲染时才传入，不用每次改窗口都重建相机。
-- **`Proj` 枚举在类外**（`render::Proj`）：避免嵌套枚举的 `Camera::Proj::Perspective` 冗长写法。
+- **`Proj` 枚举在类外**（`lCYC::render::Proj`）：避免嵌套枚举的 `Camera::Proj::Perspective` 冗长写法。
 - **正交投影的 aspect 修正**：正交范围固定 ±3 时，若屏幕不是正方形，画面会被拉伸变形。所以正交要**按 aspect 修正 x 范围**：`-3*aspect, 3*aspect, -3, 3`。这是第 4 讲"aspect 修正屏幕非方形"在正交下的具体实现（透视已由矩阵内修正，正交需要调用方手动传范围）。
 
-## 8.5 两个后端对比——同一接口，两种哲学
+## 8.5 三个后端对比——同一接口，三种实现
 
-|            | SDL3RenderDevice   | SoftwareBackend       |
-| ---------- | ------------------ | --------------------- |
-| 像素谁算   | SDL 渲染器（驱动） | 自己的 CPU 代码       |
-| 绘制方式   | 线框（线段）       | 实心三角形 + 深度     |
-| 是否含 SDL | 是（实现细节）     | 否（纯引擎层）        |
-| 帧缓冲     | SDL 内部管理       | 自己管理，可读可测    |
-| 用途       | 对照/简单调试      | 教学主体 + 确定性测试 |
+|            | SDL3Device         | SoftwareDevice        | OpenGLDevice      |
+| ---------- | ------------------ | --------------------- | ----------------- |
+| 像素谁算   | SDL 渲染器（驱动） | 自己的 CPU 代码       | GPU（固定管线）   |
+| 绘制方式   | 线框（线段）       | 实心三角形 + 深度     | 实心三角形 + 深度 |
+| 是否含平台 | SDL（实现细节）    | 否（纯引擎层）        | SDL + OpenGL      |
+| 帧缓冲     | SDL 内部管理       | 自己管理，可读可测    | GPU 后缓冲        |
+| 用途       | 对照/简单调试      | 教学主体 + 确定性测试 | 实际显示/性能验证 |
 
-**同一个 `RenderDevice` 接口，应用层代码一字不改，切换后端只改一行**（`--backend software` 参数）。
+**同一个 `RenderDevice` 接口，应用层代码一字不改，切换后端只改命令行参数**（`--backend sdl3|software|opengl`）。这是抽象层的全部价值。
+
+## 8.6 OpenGL 后端：同一个接口换 GPU（M5）
+
+### 为什么 OpenGL 后端这么短
+
+对比：软光栅几百行（逐像素算），OpenGL 后端约 150 行。**GPU 把"逐像素"的活全包了**——顶点变换、光栅化、深度测试、近平面裁剪全是硬件/驱动干的。
+
+### 固定管线 vs 现代管线
+
+```cpp
+// 固定管线（本项目 MVP）：逐顶点发出，矩阵直传
+glMatrixMode(GL_MODELVIEW);
+glLoadMatrixf(mvp.data());          // 列主序直传
+ glBegin(GL_TRIANGLES);
+  glColor3f(v.color.x, v.color.y, v.color.z);
+  glVertex3f(v.pos.x, v.pos.y, v.pos.z);
+glEnd();
+```
+
+| 管线     | 顶点怎么给       | 矩阵怎么给             | 适合          |
+| -------- | ---------------- | ---------------------- | ------------- |
+| 固定管线 | 逐个 glVertex3f  | glLoadMatrixf          | 教学/最小 MVP |
+| 现代管线 | VAO/VBO 批量上传 | 着色器 uniform（uMVP） | 生产          |
+
+**列主序直传**：`Matrix4x4` 存储是列主序 `m[col*4+row]`，与 OpenGL 矩阵内存布局完全一致 → `glLoadMatrixf(mvp.data())` 直接传，无需转置。这是当初定矩阵约定的红利。
+
+### GPU 免费送的三件事（对照软光栅的劳作）
+
+| 能力       | 软光栅（手写）           | OpenGL（一行）                             |
+| ---------- | ------------------------ | ------------------------------------------ |
+| 深度测试   | 深度缓冲 + setPixel 比较 | `glEnable(GL_DEPTH_TEST)`                  |
+| 透视除法   | transformVertex 手算 w   | 硬件自动                                   |
+| 近平面裁剪 | invalid 丢弃（简化）     | **完整裁剪**（跨近平面的三角形被正确切开） |
+
+特别是**近平面裁剪**：软光栅是"w≤0 丢弃"的简化版（画面边缘会缺角），OpenGL 是完整裁剪——这正是软光栅里留作后续的作业，GPU 免费给你。
+
+### 双后端画面一致怎么验证（M5 验收）
+
+```bash
+render_demo.exe --backend software --screenshot sw.bmp
+render_demo.exe --backend opengl   --screenshot gl.bmp
+```
+
+然后逐像素统计对比：背景色数量一致、静止立方体同一颜色面像素数完全一致、无异常色块。本项目实测：静止立方体橙色面两后端像素数**完全相同**（11312），背景差 <0.01%。
+
+### OpenGL 后端的窗口细节
+
+- 窗口必须带 `SDL_WINDOW_OPENGL` 标志（才能创建 GL 上下文）
+- `SDL_GL_CreateContext` 创建上下文 + `SDL_GL_SetSwapInterval(1)` 开垂直同步
+- 截图用 `glReadPixels` 读**后缓冲**，必须在 swap（present）之前调用
+- 颜色：`glClearColor(24/255, 32/255, 48/255, 1)` 与软光栅清屏色严格一致 → 画面一致的前提
 
 ---
 
@@ -988,8 +1039,8 @@ while (running):
 ```cpp
 const double t = clock.getLogicTime();               // 逻辑时间（tick 对齐）
 const float angle = (float)t * 1.5f;                 // 角速度 1.5 rad/s
-Quaternion rot = math::axisAngle({0,1,0}, angle);    // 绕 Y 轴
-Matrix4x4 M_rot = math::translation({0,0.8,0}) * math::rotation(rot);
+Quaternion rot = lCYC::math::Quaternion({0,1,0}, angle);   // 绕 Y 轴
+Matrix4x4 M_rot = lCYC::math::translation({0,0.8,0}) * lCYC::math::rotation(rot);
 ```
 
 **顺序口诀复习（第 2 讲：先做的靠右）**：`T·R` 从右往左读 = 先 `R`（绕自身中心转）再 `T`（平移到网格上方 y=0.8，让半边长 0.8 的立方体底贴地面）。**如果写成 `R·T`，立方体会绕世界原点公转飞出去**——这正是第 2 讲 canvas `translate`+`rotate` 顺序问题在 3D 的翻版。
@@ -1171,7 +1222,9 @@ cmake --build build/vscodeBuild --target render_demo test_render
 # 运行
 .\build\vscodeBuild\render_demo.exe                    # SDL3 线框后端
 .\build\vscodeBuild\render_demo.exe --backend software # 软光栅后端
+.\build\vscodeBuild\render_demo.exe --backend opengl   # OpenGL GPU 后端
 .\build\vscodeBuild\render_demo.exe --backend software --screenshot out.bmp  # 截图模式
+.\build\vscodeBuild\render_demo.exe --backend opengl --screenshot out.bmp    # OpenGL 截图
 .\build\vscodeBuild\test_render.exe                    # 软光栅单测（8 断言）
 
 # 操作
@@ -1236,4 +1289,4 @@ flowchart LR
 
 ---
 
-_后续：M5 OpenGL 后端（同一 RenderDevice 接口）、M6 RenderServer + Engine 组装、未来 RenderDevice 分层为 Command/Immediate 两代接口。_
+_后续：M6 RenderServer + Engine 组装、RenderDevice 分层为 Command/Immediate 两代接口、OpenGL 后端升级现代管线（VAO/VBO + shader）。_

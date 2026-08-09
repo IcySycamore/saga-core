@@ -16,18 +16,17 @@
 - [ ] `Matrix4x4 trs(pos, rot, scale)`（TRS 合成，顺序 T*R*S 约定明确）
 - [ ] `Matrix4x4 trs(pos, rot)`（默认 scale=1）
 - [ ] 分解：`decomposeTRS(mat, pos, rot, scale)`（从矩阵还原，文档标注非唯一性）
-- [ ] 欧拉↔四元数：`Quaternion eulerToQuat(x,y,z)` / `eulerToQuat(Vector3)` / `quatToEuler(q)`
+- [ ] 欧拉↔四元数：`euler(pitch,yaw,roll)` / `quatToEuler(q)`（eulerToQuat 冗余封装已删）
 - [ ] 欧拉↔矩阵：`Matrix4x4 eulerToMatrix(...)` / 从矩阵提取欧拉
 - [ ] `Matrix4x4 lookAt(eye, target, up)` 封装（调用 M5）
-- [ ] `Vector3 transformPoint(mat, v)` / `transformDirection(mat, v)`（明确区分：point 带平移，direction 不带）
-- [ ] `Vector3 rotateVector(q, v)` 便捷封装
+- [ ] `Vector3 transformDirection(mat, v)`（不带平移；变换点用 `Matrix4x4::operator*(Vector3)`，纯转发封装已删）
 - [ ] 一致性测试：trs → decompose → 还原（容差内相等）
-- [ ] 命名空间 `math::`
+- [ ] 命名空间 `lCYC::math::`
 
 ## 性能
 
 - 组合工具为"组装/分解"用途，非每帧热路径，但保持 `inline`
-- `transformPoint`/`transformDirection` 是热路径（渲染每顶点），用内联 + 无分配
+- `transformDirection` 是热路径（渲染每顶点），用内联 + 无分配
 
 ## 扩展性
 
@@ -37,6 +36,6 @@
 ## 安全
 
 - `decomposeTRS` 对不可逆/奇异矩阵防御（返回 false 或 assert）
-- `transformPoint` vs `transformDirection` 的语义在文档强约束（混用是经典 bug）
+- 变换点（`operator*`）vs 变换方向（`transformDirection`）的语义在文档强约束（混用是经典 bug）
 - 欧拉↔四元数转换明确旋转顺序约定（文档：如 ZYX），防混淆
 - 所有转换往返测试（forward↔inverse 容差内一致）作为验收强制项

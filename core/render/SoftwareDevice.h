@@ -1,18 +1,17 @@
 #pragma once
 /**
- * @brief 软件光栅化后端（RenderDevice 的 CPU 实现）
- * @namespace render
- * @note 职责:
+ * @brief 软件光栅化后端
+ * @namespace lCYC::render
+ * @details 职责:
  *   - 纯 CPU 光栅化：顶点变换 → 屏幕坐标 → 逐像素填帧缓冲
- *   - 深度缓冲：逐像素深度测试（第 5 讲 z-buffer）
- *   - 三角形光栅化：重心坐标 + 插值（第 6 讲）
+ *   - 深度缓冲：逐像素深度测试
+ *   - 三角形光栅化：重心坐标 + 插值
  *   - 画线：Bresenham + 深度插值
  * @note 设计:
- *   - 纯引擎层：不依赖任何 SDL/OpenGL/平台 API（可单测、确定性）
+ *   - 纯引擎层
  *   - 帧缓冲可被外部读取（framebuffer()），由显示层/测试消费
  *   - init 忽略窗口句柄（纯 CPU 无窗口），endFrame 无 present（显示在外部）
  * @note 像素格式：uint32_t RGBA8888（0xRRGGBBAA）
- * @note C++20
  */
 
 #include "core/math/Math.h"
@@ -24,9 +23,9 @@
 #include <span>
 #include <vector>
 
-namespace render {
+namespace lCYC::render {
 
-class SoftwareBackend : public RenderDevice {
+class SoftwareDevice : public RenderDevice {
 public:
   // ============================ 生命周期 ============================
 
@@ -101,7 +100,7 @@ public:
    * @param mvp 模型视图投影矩阵 = P*V*M
    * @note 近平面裁剪：含相机后方（w≤0）顶点的图元丢弃，避免 NDC 翻转爆炸
    */
-  void drawMesh(MeshHandle h, const math::Matrix4x4 &mvp) override {
+  void drawMesh(MeshHandle h, const lCYC::math::Matrix4x4 &mvp) override {
     if (h.value >= m_meshes.size() || m_meshes[h.value].empty()) {
       return;
     }
@@ -135,7 +134,8 @@ public:
    * @param divs 每边格数
    * @param vp 视图投影矩阵 V*P
    */
-  void drawGrid(float size, int divs, const math::Matrix4x4 &vp) override {
+  void drawGrid(float size, int divs,
+                const lCYC::math::Matrix4x4 &vp) override {
     const float half = size * 0.5f;
     const float step = size / static_cast<float>(divs);
     const Vertex color{{0.65f, 0.75f, 0.85f}}; // 亮灰蓝（可见）
@@ -195,7 +195,8 @@ private:
    * @return 屏幕空间顶点（invalid=true 表示在近平面后）
    * @note 检测裁剪 w≤0（相机后方），避免透视除法翻转 NDC 导致图元爆炸
    */
-  ScreenVert transformVertex(const Vertex &v, const math::Matrix4x4 &m) const {
+  ScreenVert transformVertex(const Vertex &v,
+                             const lCYC::math::Matrix4x4 &m) const {
     // 裁剪坐标（含齐次 w）——手动计算以获取 w 符号
     const float cx = m[0] * v.pos.x + m[4] * v.pos.y + m[8] * v.pos.z + m[12];
     const float cy = m[1] * v.pos.x + m[5] * v.pos.y + m[9] * v.pos.z + m[13];
@@ -206,7 +207,7 @@ private:
       return {0.0f, 0.0f, 1.0f, toRGBA(v.color), true};
     }
     const float inv = 1.0f / cw;
-    const math::Vector3 ndc{cx * inv, cy * inv, cz * inv};
+    const lCYC::math::Vector3 ndc{cx * inv, cy * inv, cz * inv};
     const float sx = (ndc.x + 1.0f) * 0.5f * static_cast<float>(m_width);
     const float sy = (1.0f - ndc.y) * 0.5f * static_cast<float>(m_height);
     // NDC z ∈ [-1,1] → 深度 [0,1]
@@ -219,7 +220,7 @@ private:
    * SDL_PIXELFORMAT_RGBA32）
    * @note 打包 = (A<<24)|(B<<16)|(G<<8)|R
    */
-  static uint32_t toRGBA(const math::Vector3 &c) {
+  static uint32_t toRGBA(const lCYC::math::Vector3 &c) {
     const auto b = [](float x) {
       const int v = static_cast<int>(x * 255.0f + 0.5f);
       return static_cast<uint32_t>(v < 0 ? 0 : (v > 255 ? 255 : v));
@@ -370,4 +371,4 @@ private:
   std::vector<std::vector<Vertex>> m_meshes;
 };
 
-} // namespace render
+} // namespace lCYC::render

@@ -10,10 +10,10 @@
  * 说明:
  *   - 本文件是"应用层"：负责创建 SDL3 窗口（容器）、组装 RenderDevice、场景内容
  *   - 引擎层 core/render 不包含 SDL 头；SDL 只在这里（窗口创建）与
- * SDL3RenderDevice.h
+ * SDL3Device.h
  *   - M3：Camera + 透视投影（MVP 串联）
  *   - M4：线框立方体 + Clock 驱动旋转动画 + 多物体
- *   - M5：SoftwareBackend（软光栅）接入，用 SDL 纹理显示帧缓冲
+ *   - M5：SoftwareDevice（软光栅）接入，用 SDL 纹理显示帧缓冲
  *
  * 操作:
  *   - P 键：切换透视/正交投影
@@ -22,9 +22,10 @@
 
 #include "core/Time/Clock.h"
 #include "core/render/Camera.h"
+#include "core/render/OpenGLDevice.h"
 #include "core/render/RenderDevice.h"
-#include "core/render/SDL3RenderDevice.h"
-#include "core/render/SoftwareBackend.h"
+#include "core/render/SDL3Device.h"
+#include "core/render/SoftwareDevice.h"
 
 #include <SDL3/SDL.h>
 #include <algorithm>
@@ -38,10 +39,10 @@
  * @param color 线框颜色
  * @return 顶点数组（成对 = 一条线段）
  */
-static std::vector<render::Vertex> makeCubeEdges(float half,
-                                                 const math::Vector3 &color) {
+static std::vector<lCYC::render::Vertex> makeCubeEdges(float half,
+                                                 const lCYC::math::Vector3 &color) {
   // 8 个角点（模型空间，中心在原点）
-  const math::Vector3 v[8] = {
+  const lCYC::math::Vector3 v[8] = {
       {-half, -half, -half}, {half, -half, -half}, {half, half, -half},
       {-half, half, -half},  {-half, -half, half}, {half, -half, half},
       {half, half, half},    {-half, half, half},
@@ -52,7 +53,7 @@ static std::vector<render::Vertex> makeCubeEdges(float half,
       {4, 5}, {5, 6}, {6, 7}, {7, 4}, // 后面
       {0, 4}, {1, 5}, {2, 6}, {3, 7}, // 连接
   };
-  std::vector<render::Vertex> verts;
+  std::vector<lCYC::render::Vertex> verts;
   verts.reserve(24);
   for (const auto &e : edges) {
     verts.push_back({v[e[0]], color});
@@ -67,10 +68,10 @@ static std::vector<render::Vertex> makeCubeEdges(float half,
  * @param color 表面颜色（每面不同色用于区分）
  * @return 顶点数组（每 3 个顶点 = 一个三角形）
  */
-static std::vector<render::Vertex> makeCubeSolid(float half,
-                                                 const math::Vector3 &color) {
+static std::vector<lCYC::render::Vertex> makeCubeSolid(float half,
+                                                 const lCYC::math::Vector3 &color) {
   // 8 个角点
-  const math::Vector3 v[8] = {
+  const lCYC::math::Vector3 v[8] = {
       {-half, -half, -half}, {half, -half, -half}, {half, half, -half},
       {-half, half, -half},  {-half, -half, half}, {half, -half, half},
       {half, half, half},    {-half, half, half},
@@ -89,10 +90,10 @@ static std::vector<render::Vertex> makeCubeSolid(float half,
       {1.0f, 0.85f, 0.85f}, {0.85f, 0.85f, 1.0f}, {0.85f, 1.0f, 0.85f},
       {1.0f, 1.0f, 0.85f},  {1.0f, 0.9f, 0.95f},  {0.9f, 0.95f, 1.0f},
   };
-  std::vector<render::Vertex> verts;
+  std::vector<lCYC::render::Vertex> verts;
   verts.reserve(36);
   for (int f = 0; f < 6; ++f) {
-    const math::Vector3 fc{color.x * shades[f][0], color.y * shades[f][1],
+    const lCYC::math::Vector3 fc{color.x * shades[f][0], color.y * shades[f][1],
                            color.z * shades[f][2]};
     const auto &q = faces[f];
     verts.push_back({v[q[0]], fc});
@@ -106,12 +107,12 @@ static std::vector<render::Vertex> makeCubeSolid(float half,
 }
 
 /**
- * @brief 把 SoftwareBackend 帧缓冲保存为 BMP 文件（调试用）
+ * @brief 把 SoftwareDevice 帧缓冲保存为 BMP 文件（调试用）
  * @param sw 软光栅后端
  * @param path 输出路径
  * @return true 成功
  */
-static bool swSaveBMP(const render::SoftwareBackend *sw, const char *path) {
+static bool swSaveBMP(const lCYC::render::SoftwareDevice *sw, const char *path) {
   FILE *fp = std::fopen(path, "wb");
   if (!fp) {
     return false;
@@ -161,17 +162,28 @@ static bool swSaveBMP(const render::SoftwareBackend *sw, const char *path) {
 }
 
 int main(int argc, char *argv[]) {
-  // 可选参数：--backend software（用软光栅）/ --screenshot <path>
+  // 后端枚举：sdl3（线框，默认）/ software（软光栅）/ opengl（GPU）
+  enum class Backend { Sdl3, Software, OpenGL };
+  // 可选参数：--backend <sdl3|software|opengl> / --screenshot <path>
   const char *shotPath = nullptr;
-  bool useSoftware = false;
+  Backend backend = Backend::Sdl3;
   for (int i = 1; i < argc; ++i) {
     if (std::strcmp(argv[i], "--screenshot") == 0 && i + 1 < argc) {
       shotPath = argv[i + 1];
     }
     if (std::strcmp(argv[i], "--backend") == 0 && i + 1 < argc) {
-      useSoftware = (std::strcmp(argv[i + 1], "software") == 0);
+      const char *b = argv[i + 1];
+      if (std::strcmp(b, "software") == 0) {
+        backend = Backend::Software;
+      } else if (std::strcmp(b, "opengl") == 0) {
+        backend = Backend::OpenGL;
+      } else {
+        backend = Backend::Sdl3;
+      }
     }
   }
+  const bool useSoftware = (backend == Backend::Software);
+  const bool useOpenGL = (backend == Backend::OpenGL);
 
   const int width = 1280;
   const int height = 720;
@@ -184,8 +196,10 @@ int main(int argc, char *argv[]) {
 
   // ---- 创建窗口（容器/屏幕）----
   // SDL3: SDL_CreateWindow(title, w, h, flags)——位置由属性控制，默认居中
-  SDL_Window *window =
-      SDL_CreateWindow("Saga Render Demo", width, height, SDL_WINDOW_RESIZABLE);
+  // OpenGL 后端需要窗口带 SDL_WINDOW_OPENGL 标志（创建 GL 上下文）
+  SDL_Window *window = SDL_CreateWindow(
+      "Saga Render Demo", width, height,
+      SDL_WINDOW_RESIZABLE | (useOpenGL ? SDL_WINDOW_OPENGL : 0));
   if (!window) {
     std::fprintf(stderr, "SDL_CreateWindow 失败: %s\n", SDL_GetError());
     SDL_Quit();
@@ -194,22 +208,23 @@ int main(int argc, char *argv[]) {
 
   /* ---- 组装 RenderDevice ----
    * SDL3 后端：直接用 SDL 渲染器画（线框）
-   * SoftwareBackend：CPU 光栅化到帧缓冲，再用 SDL 纹理显示 */
-  render::NativeWindowHandle<SDL_Window> handle;
+   * SoftwareDevice：CPU 光栅化到帧缓冲，再用 SDL 纹理显示 */
+  lCYC::render::NativeWindowHandle<SDL_Window> handle;
   handle.native = window;
 
-  // SDL 渲染器（两种后端都需要：软件后端用它显示帧缓冲纹理）
-  SDL_Renderer *sdlRenderer = SDL_CreateRenderer(window, nullptr);
-  if (!sdlRenderer) {
-    std::fprintf(stderr, "SDL_CreateRenderer 失败: %s\n", SDL_GetError());
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-    return 1;
-  }
-
-  // 软件后端的显示纹理（RGBA8888 帧缓冲 → GPU 纹理）
+  // SDL 渲染器（仅软光栅需要：用它显示帧缓冲纹理；SDL3 后端自建渲染器，
+  // OpenGL 后端用 GL 上下文）
+  SDL_Renderer *sdlRenderer = nullptr;
   SDL_Texture *fbTexture = nullptr;
   if (useSoftware) {
+    sdlRenderer = SDL_CreateRenderer(window, nullptr);
+    if (!sdlRenderer) {
+      std::fprintf(stderr, "SDL_CreateRenderer 失败: %s\n", SDL_GetError());
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return 1;
+    }
+    // 软光栅的显示纹理（RGBA8888 帧缓冲 → 纹理）
     fbTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_RGBA32,
                                   SDL_TEXTUREACCESS_STREAMING, width, height);
     if (!fbTexture) {
@@ -221,40 +236,49 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  render::RenderDevice *device = nullptr;
-  render::SDL3RenderDevice sdlDevice;
-  render::SoftwareBackend swDevice;
+  lCYC::render::RenderDevice *device = nullptr;
+  lCYC::render::SDL3Device sdlDevice;
+  lCYC::render::SoftwareDevice swDevice;
+  lCYC::render::OpenGLDevice glDevice;
   if (useSoftware) {
     swDevice.init({}, width, height); // 软光栅无需窗口句柄
     device = &swDevice;
+  } else if (useOpenGL) {
+    glDevice.init(handle, width,
+                  height); // GPU 后端（需 SDL_WINDOW_OPENGL 窗口）
+    device = &glDevice;
   } else {
     sdlDevice.init(handle, width, height);
     device = &sdlDevice;
   }
 
   // ---- 相机（M3：透视 + 斜视角）----
-  render::Camera camera;
-  camera.setPerspective(60.0f * math::PI / 180.0f, 0.1f, 100.0f);
+  lCYC::render::Camera camera;
+  camera.setPerspective(60.0f * lCYC::math::PI / 180.0f, 0.1f, 100.0f);
   camera.lookAt({3.0f, 3.0f, 3.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f});
 
   // 屏幕宽高比（渲染分辨率固定 1280x720，因此宽高比恒定）
   const float aspect = static_cast<float>(width) / static_cast<float>(height);
 
-  // ---- 场景内容（M4）----
-  // 旋转立方体：SDL3 后端用线框，软光栅用实心三角形
-  const render::MeshHandle rotatingCube =
-      useSoftware ? device->createMesh(makeCubeSolid(0.8f, {0.9f, 0.9f, 0.9f}))
-                  : device->createMesh(makeCubeEdges(0.8f, {0.9f, 0.9f, 0.9f}));
+  // ---- 场景内容（M4/M5）----
+  // 实心模式：软光栅/OpenGL（GPU 深度测试）都用实心三角形 → 双后端画面一致
+  // 线框模式：SDL3 线框后端
+  const bool solidMesh = (backend != Backend::Sdl3);
+  // 旋转立方体
+  const lCYC::render::MeshHandle rotatingCube =
+      solidMesh ? device->createMesh(makeCubeSolid(0.8f, {0.9f, 0.9f, 0.9f}))
+                : device->createMesh(makeCubeEdges(0.8f, {0.9f, 0.9f, 0.9f}));
   // 静止立方体（橙色，偏移到右侧，用于对比遮挡）
-  const render::MeshHandle staticCube =
-      useSoftware ? device->createMesh(makeCubeSolid(0.5f, {1.0f, 0.6f, 0.2f}))
-                  : device->createMesh(makeCubeEdges(0.5f, {1.0f, 0.6f, 0.2f}));
+  const lCYC::render::MeshHandle staticCube =
+      solidMesh ? device->createMesh(makeCubeSolid(0.5f, {1.0f, 0.6f, 0.2f}))
+                : device->createMesh(makeCubeEdges(0.5f, {1.0f, 0.6f, 0.2f}));
 
   // 逻辑时钟（固定步长，驱动动画）
-  clockns::Clock clock;
+  lCYC::clock::Clock clock;
 
   std::printf("窗口已创建: %dx%d，后端=%s 就绪\n", width, height,
-              useSoftware ? "Software(软光栅)" : "SDL3");
+              useOpenGL ? "OpenGL(GPU)"
+                        : (useSoftware ? "Software(软光栅)" : "SDL3(线框)"));
   std::printf("（P 键切换透视/正交，关闭窗口退出）\n");
 
   // ---- 主循环：处理事件直到用户关窗 ----
@@ -273,11 +297,11 @@ int main(int argc, char *argv[]) {
       // P 键：切换透视/正交投影
       // 正交范围按 aspect 调整（x 范围更宽），保证世界比例不被屏幕拉伸
       if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_P) {
-        if (camera.projectionType() == render::Proj::Perspective) {
+        if (camera.projectionType() == lCYC::render::Proj::Perspective) {
           camera.setOrthographic(-3.0f * aspect, 3.0f * aspect, -3.0f, 3.0f,
                                  0.1f, 100.0f);
         } else {
-          camera.setPerspective(60.0f * math::PI / 180.0f, 0.1f, 100.0f);
+          camera.setPerspective(60.0f * lCYC::math::PI / 180.0f, 0.1f, 100.0f);
         }
       }
     }
@@ -290,7 +314,7 @@ int main(int argc, char *argv[]) {
     const int curW = useSoftware ? swDevice.width() : width;
     const int curH = useSoftware ? swDevice.height() : height;
     const float curAspect = static_cast<float>(curW) / static_cast<float>(curH);
-    const math::Matrix4x4 vp = camera.viewProjection(curAspect);
+    const lCYC::math::Matrix4x4 vp = camera.viewProjection(curAspect);
 
     // 地面网格
     device->drawGrid(4.0f, 8, vp);
@@ -300,20 +324,21 @@ int main(int argc, char *argv[]) {
      * M = T(0,0.8,0) * R：先绕自身中心旋转，再平移到网格上方（底贴 y=0） */
     const double t = clock.getLogicTime();
     const float angle = static_cast<float>(t) * 1.5f; // 1.5 rad/s
-    const math::Quaternion rot = math::axisAngle({0.0f, 1.0f, 0.0f}, angle);
-    const math::Matrix4x4 M_rot =
-        math::translation({0.0f, 0.8f, 0.0f}) * math::rotation(rot);
+    const lCYC::math::Quaternion rot = lCYC::math::Quaternion({0.0f, 1.0f, 0.0f}, angle);
+    const lCYC::math::Matrix4x4 M_rot =
+        lCYC::math::translation({0.0f, 0.8f, 0.0f}) * lCYC::math::rotation(rot);
     device->drawMesh(rotatingCube, vp * M_rot);
 
     // 静止立方体：偏移到 (1.5, 0.5, 0)（半边长 0.5 → 底贴网格）
-    const math::Matrix4x4 M_static = math::translation({1.5f, 0.5f, 0.0f});
+    const lCYC::math::Matrix4x4 M_static = lCYC::math::translation({1.5f, 0.5f, 0.0f});
     device->drawMesh(staticCube, vp * M_static);
 
     device->endFrame();
 
-    // 显示：SDL3 后端直接 present；软光栅把帧缓冲上传到纹理再画
+    // 显示：SDL3/OpenGL 后端已在 endFrame 内
+    // present；软光栅把帧缓冲上传到纹理再画
     if (useSoftware) {
-      const auto sw = static_cast<render::SoftwareBackend *>(device);
+      const auto sw = static_cast<lCYC::render::SoftwareDevice *>(device);
       /* 关键：用当前帧缓冲尺寸拷贝（resize 后帧缓冲/纹理已重建为
        * 新尺寸，若用初始 width/height 会行错位 → 画面一片一片） */
       const int fbW = sw->width();
@@ -348,11 +373,19 @@ int main(int argc, char *argv[]) {
     }
 
     // 截图模式：N 帧后保存并退出
+    // 注意：须在 endFrame/swap 之前读像素（OpenGL 后缓冲 swap 后未定义）
     if (!shotSaved && ++frame >= 3) {
       if (useSoftware) {
         // 软光栅：帧缓冲直接存 BMP
-        const auto sw = static_cast<render::SoftwareBackend *>(device);
+        const auto sw = static_cast<lCYC::render::SoftwareDevice *>(device);
         if (swSaveBMP(sw, shotPath)) {
+          std::printf("截图已保存: %s\n", shotPath);
+        } else {
+          std::fprintf(stderr, "截图失败\n");
+        }
+      } else if (useOpenGL) {
+        // OpenGL：glReadPixels 读后缓冲存 BMP
+        if (glDevice.saveScreenshot(shotPath)) {
           std::printf("截图已保存: %s\n", shotPath);
         } else {
           std::fprintf(stderr, "截图失败\n");
@@ -374,7 +407,9 @@ int main(int argc, char *argv[]) {
   if (fbTexture) {
     SDL_DestroyTexture(fbTexture);
   }
-  SDL_DestroyRenderer(sdlRenderer);
+  if (sdlRenderer) {
+    SDL_DestroyRenderer(sdlRenderer);
+  }
   SDL_DestroyWindow(window);
   SDL_Quit();
   std::printf("窗口已关闭，正常退出\n");

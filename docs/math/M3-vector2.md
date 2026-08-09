@@ -23,7 +23,7 @@
 - [ ] 静态常量：`zero`/`one`/`up`/`down`/`left`/`right`
 - [ ] **语义澄清**：`one()` = 全 1 向量（非单位向量，长度 √2）；单位向量用 `up`/`down`/`left`/`right`
 - [ ] `Vector3` ↔ `Vector2` 转换（`toVector3(z)` / 显式构造）
-- [ ] 命名空间 `math::`
+- [ ] 命名空间 `lCYC::math::`
 
 ## 性能
 

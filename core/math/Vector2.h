@@ -1,16 +1,15 @@
 #pragma once
 /**
  * @brief 二维向量
- * @namespace math
+ * @namespace lCYC::math
  * @note 内存布局: 2 × float = 8 字节
- * @note C++20，constexpr 优先，无 RTTI
  */
 
 #include <cassert>
 #include <cmath>
 #include <string>
 
-namespace math {
+namespace lCYC::math {
 
 struct Vector2 {
   float x;
@@ -25,8 +24,10 @@ struct Vector2 {
   // ============================ 静态常量 ============================
 
   static constexpr Vector2 zero() { return Vector2(0.0f, 0.0f); }
-  /// 全 1 向量
-  /// 需要单位长度向量请用 up/down/left/right
+  /**
+   * @brief 全 1 向量
+   * @note 需要单位长度向量请用 up/down/left/right
+   */
   static constexpr Vector2 one() { return Vector2(1.0f, 1.0f); }
   static constexpr Vector2 up() { return Vector2(0.0f, 1.0f); }
   static constexpr Vector2 down() { return Vector2(0.0f, -1.0f); }
@@ -55,7 +56,6 @@ struct Vector2 {
   constexpr Vector2 operator*(float scalar) const {
     return Vector2(x * scalar, y * scalar);
   }
-  /// 分量逐乘（Hadamard 积）：(a.x*b.x, a.y*b.y)
   constexpr Vector2 operator*(const Vector2 &rhs) const {
     return Vector2(x * rhs.x, y * rhs.y);
   }
@@ -129,7 +129,7 @@ constexpr float distance(const Vector2 &a, const Vector2 &b) {
   return length(a - b);
 }
 
-/// 归一化副本。零向量安全
+/// 归一化副本
 constexpr Vector2 normalized(const Vector2 &v) {
   const float lenSq = lengthSquared(v);
   if (lenSq == 0.0f || lenSq == 1.0f) {
@@ -138,7 +138,7 @@ constexpr Vector2 normalized(const Vector2 &v) {
   return v * (1.0f / std::sqrt(lenSq));
 }
 
-/// 就地归一化。零向量安全
+/// 就地归一化
 inline void normalize(Vector2 &v) {
   const float lenSq = lengthSquared(v);
   if (lenSq == 0.0f || lenSq == 1.0f) {
@@ -147,14 +147,14 @@ inline void normalize(Vector2 &v) {
   v *= 1.0f / std::sqrt(lenSq);
 }
 
-/// 2D 旋转（弧度，逆时针为正）
+/// 2D 旋转）
 constexpr Vector2 rotate(const Vector2 &v, float angleRad) {
   const float c = std::cos(angleRad);
   const float s = std::sin(angleRad);
   return Vector2(v.x * c - v.y * s, v.x * s + v.y * c);
 }
 
-/// 钳制长度。零向量安全。maxLen < 0 按 0 处理（assert 提示）
+/// 钳制长度。零向量安全。maxLen < 0 按 0 处理
 constexpr Vector2 clampMagnitude(const Vector2 &v, float maxLen) {
   assert(maxLen >= 0.0f && "clampMagnitude: maxLen must be non-negative");
   const float clampedMax = maxLen < 0.0f ? 0.0f : maxLen;
@@ -165,7 +165,7 @@ constexpr Vector2 clampMagnitude(const Vector2 &v, float maxLen) {
   return v;
 }
 
-/// 两向量弧度制夹角，[0, π]。零向量返回 0
+/// 两向量弧度角，[0, π]。零向量返回 0
 constexpr float angle(const Vector2 &a, const Vector2 &b) {
   const float lenSqA = lengthSquared(a);
   const float lenSqB = lengthSquared(b);
@@ -182,4 +182,4 @@ constexpr Vector2 operator*(float scalar, const Vector2 &v) {
   return v * scalar;
 }
 
-} // namespace math
+} // namespace lCYC::math

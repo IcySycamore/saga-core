@@ -55,9 +55,10 @@ set(CORE_HEADERS
     core/math/Vector2.h
     core/math/Vector3.h
     core/render/Camera.h
+    core/render/OpenGLDevice.h
     core/render/RenderDevice.h
-    core/render/SDL3RenderDevice.h
-    core/render/SoftwareBackend.h
+    core/render/SDL3Device.h
+    core/render/SoftwareDevice.h
     core/Time/Clock.h
 )
 
@@ -164,7 +165,7 @@ if(WIN32)
     target_link_libraries(dj PRIVATE ole32 oleaut32 winmm user32 shell32)
 endif()
 
-# ===== 渲染演示（M1-M2：SDL3 窗口 + RenderDevice 抽象） =====
+# ===== 渲染演示（M1-M5：SDL3 窗口 + RenderDevice 抽象 + 三后端） =====
 add_executable(render_demo
     tools/render_demo.cpp
 )
@@ -174,4 +175,10 @@ if(TARGET SDL3::SDL3main)
     target_link_libraries(render_demo PRIVATE SDL3::SDL3main SDL3::SDL3)
 else()
     target_link_libraries(render_demo PRIVATE SDL3::SDL3)
+endif()
+# OpenGL（OpenGLDevice 用固定管线；Windows 上链接 opengl32）
+find_package(OpenGL REQUIRED)
+if(OpenGL_FOUND)
+    message(STATUS "OpenGL found: ${OPENGL_LIBRARIES}")
+    target_link_libraries(render_demo PRIVATE OpenGL::GL)
 endif()

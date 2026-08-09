@@ -19,7 +19,7 @@
 - [ ] `T clamp(T value, T min, T max)`（模板，constexpr）
 - [ ] `T lerp(T a, T b, float t)`（模板，constexpr）
 - [ ] `bool approxEqual(a, b, eps)`（浮点比较，默认 EPSILON）
-- [ ] 命名空间 `math::`，无 Boost 依赖
+- [ ] 命名空间 `lCYC::math::`，无 Boost 依赖
 - [ ] 全部 `constexpr` 可在编译期求值（static_assert 验证）
 
 ## 性能

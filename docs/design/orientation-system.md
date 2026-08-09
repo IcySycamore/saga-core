@@ -54,9 +54,9 @@ struct RigidBody {
 std::vector<Quaternion> fixEulerCurve(const std::vector<Euler>& eulers) {
     std::vector<Quaternion> result;
     result.reserve(eulers.size());
-    result.push_back(eulerToQuat(eulers[0]));
+    result.push_back(euler(eulers[0].x, eulers[0].y, eulers[0].z));
     for (size_t i = 1; i < eulers.size(); ++i) {
-        Quaternion q1 = eulerToQuat(eulers[i]);
+        Quaternion q1 = euler(eulers[i].x, eulers[i].y, eulers[i].z);
         Quaternion q2 = Quaternion(-q1.x, -q1.y, -q1.z, -q1.w);
         // 连续性：选离上一帧更近的符号（q 与 -q 同旋转）
         result.push_back(dot(result[i-1], q1) >= dot(result[i-1], q2) ? q1 : q2);
@@ -75,7 +75,7 @@ Quaternion integrate(Quaternion q, Vector3 omega, float dt) {
     float halfAngle = length(omega) * dt * 0.5f;
     if (halfAngle < 1e-6f) return q;
     Vector3 axis = normalized(omega);
-    Quaternion dq = axisAngle(axis, halfAngle * 2.0f); // 指数映射 exp(0.5·ω·dt)
+    Quaternion dq = Quaternion(axis, halfAngle * 2.0f); // 指数映射 exp(0.5·ω·dt)
     return (dq * q).normalized();
 }
 ```
@@ -93,9 +93,9 @@ class FirstPersonCamera {
     Quaternion orientation;
 public:
     void rotate(float mouseDX, float mouseDY, float sensitivity) {
-        Quaternion dYaw   = axisAngle(Vector3::up(), -mouseDX * sensitivity);
+        Quaternion dYaw   = Quaternion(Vector3::up(), -mouseDX * sensitivity);
         Vector3 localRight = orientation * Vector3::right();
-        Quaternion dPitch = axisAngle(localRight, -mouseDY * sensitivity);
+        Quaternion dPitch = Quaternion(localRight, -mouseDY * sensitivity);
         orientation = (dYaw * orientation).normalized();
         orientation = (dPitch * orientation).normalized();
     }
