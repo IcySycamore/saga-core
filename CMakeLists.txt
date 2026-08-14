@@ -107,6 +107,15 @@ target_include_directories(test_item_slot_integration PRIVATE
 )
 target_link_libraries(test_item_slot_integration PRIVATE Boost::json)
 
+add_executable(test_callback
+    test/test_callback.cpp
+)
+
+target_include_directories(test_callback PRIVATE
+    ${CMAKE_SOURCE_DIR}
+)
+target_link_libraries(test_callback PRIVATE Boost::json)
+
 add_executable(test_math
     test/test_math.cpp
 )
@@ -127,6 +136,7 @@ configure_file(
 add_test(NAME ItemManagerTest COMMAND test_item_manager)
 add_test(NAME ItemTypeTest COMMAND test_item_type)
 add_test(NAME ItemSlotIntegrationTest COMMAND test_item_slot_integration)
+add_test(NAME CallbackTest COMMAND test_callback)
 add_test(NAME MathTest COMMAND test_math)
 add_test(NAME TimeTest COMMAND test_time)
 add_test(NAME RandomTest COMMAND test_random)
