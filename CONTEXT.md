@@ -47,6 +47,18 @@ _Avoid_: Listener、Callback
 多播通知，1:N 广播给所有订阅者。与 handler 不同，回调不提供返回值语义。
 _Avoid_: Event（指事件对象时）、Handler
 
+**Connection**:
+信号与槽之间的独立连接对象，1:1 连接线（编译期绑定）。全局/命名空间作用域声明，生命周期比所有绑定它的 Subscriber 长。信号函数与槽互不引用对方，只通过 Connection 中转。
+_Avoid_: Bus、Channel、Signal（当指连接线时）
+
+**Subscriber（槽）**:
+接收方持有的可调用对象，构造时绑定到 Connection，析构时自动解绑（connection 失效）。槽逻辑 = 本类成员函数（`this->` 显式调用）。
+_Avoid_: Listener、Slot（当指成员函数名时）
+
+**PUBLISHER / SUBSCRIBER / CONNECTION 宏**:
+回调组件宏（`lCYC::callback`，定义于 `core/CallBack/`）。PUBLISHER 生成信号函数（转发到 Connection.emit，恒 void）；SUBSCRIBER 声明槽成员并绑定 Connection；CONNECTION 声明全局连接（隐藏完整类型名）。多对一 = 多个 PUBLISHER 信号 → 同一 Connection → 一个槽。
+_Avoid_: 带前缀的宏名（宏名永远不加前缀）
+
 **uuid**:
 实例的稳定唯一标识，使用 boost::uuids::random*generator 生成，持久化后保持稳定。
 \_Avoid*: id、index、key
