@@ -5,7 +5,7 @@ Agent 约定文件：本仓库是 TRPG 游戏引擎（C++20），目标是未来
 ## 构建与测试
 
 - 构建目录：`build/vscodeBuild/`（VS Code CMake Tools，Ninja），CLI 构建用 `build/`
-- 测试可执行文件：`build/vscodeBuild/test_item_type.exe`、`build/vscodeBuild/test_item_slot_integration.exe`、`build/vscodeBuild/test_item_manager.exe`
+- 测试可执行文件：`build/vscodeBuild/test_item_type.exe`、`test_item_slot_integration.exe`、`test_item_manager.exe`、`test_callback.exe`、`test_math.exe`、`test_time.exe`、`test_random.exe`、`test_render.exe`（均在 `build/vscodeBuild/`）
 - 测试框架：自写轻量断言宏（TEST/EXPECT/EXPECT_EQ/EXPECT_THROWS），不用 gtest
 - 测试独立于 trpg_core 库编译（只链接 Boost），避免受未完成代码影响
 - Boost 1.91.0（json、uuid），`Boost_ROOT=C:/msys64/clang64`
