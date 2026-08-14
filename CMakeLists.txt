@@ -33,6 +33,9 @@ set(CORE_SOURCES
 )
 
 set(CORE_HEADERS
+    core/CallBack/Connection.h
+    core/CallBack/Publisher.h
+    core/CallBack/Subscriber.h
     core/Dice/Dice.h
     core/Dice/Dice20.h
     core/Event/Event.h

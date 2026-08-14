@@ -139,7 +139,8 @@ static void test_subscriber_traits() {
 
   using Sub = lCYC::callback::Subscriber<void(const Player &)>;
   static_assert(std::is_default_constructible_v<Sub>, "default constructible");
-  static_assert(std::is_copy_constructible_v<Sub>, "copy constructible");
+  static_assert(!std::is_copy_constructible_v<Sub>, "not copy constructible");
+  static_assert(!std::is_move_constructible_v<Sub>, "not move constructible");
   EXPECT(true, "static_asserts passed");
 }
 

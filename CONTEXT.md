@@ -55,9 +55,11 @@ _Avoid_: Bus、Channel、Signal（当指连接线时）
 接收方持有的可调用对象，构造时绑定到 Connection，析构时自动解绑（connection 失效）。槽逻辑 = 本类成员函数（`this->` 显式调用）。
 _Avoid_: Listener、Slot（当指成员函数名时）
 
-**PUBLISHER / SUBSCRIBER / CONNECTION 宏**:
-回调组件宏（`lCYC::callback`，定义于 `core/CallBack/`）。PUBLISHER 生成信号函数（转发到 Connection.emit，恒 void）；SUBSCRIBER 声明槽成员并绑定 Connection；CONNECTION 声明全局连接（隐藏完整类型名）。多对一 = 多个 PUBLISHER 信号 → 同一 Connection → 一个槽。
+**PUBLISHER / SUBSCRIBER 宏**:
+回调组件宏（`lCYC::callback`，定义于 `core/CallBack/`）。PUBLISHER 生成信号函数（转发到 Connection.emit，恒 void）；SUBSCRIBER 声明槽成员并绑定 Connection。多对一 = 多个 PUBLISHER 信号 → 同一 Connection → 一个槽。
 _Avoid_: 带前缀的宏名（宏名永远不加前缀）
+
+> **Connection 无宏**：Connection 用直接类型声明（`lCYC::callback::Connection<Sig>`，全局作用域），不提供 CONNECTION 宏。
 
 **uuid**:
 实例的稳定唯一标识，使用 boost::uuids::random*generator 生成，持久化后保持稳定。

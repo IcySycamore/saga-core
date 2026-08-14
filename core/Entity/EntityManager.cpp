@@ -195,13 +195,17 @@ EntityHandler EntityManager::getHandler(int32_t type_id) {
 }
 EntityInstance *EntityManager::createInstance(int32_t type_id) {
   std::unique_lock lock(m_pool_mutex);
-  auto itArc = this->getArche(type_id);
-  if (itArc == nullptr)
+  // #38: 不再调用 getArche()（其内部锁在返回前释放，锁外遍历悬垂）。
+  // 改为自持 arche 读锁并在锁作用域内完成 defaults 遍历，锁序 pool→arche 单向。
+  std::shared_lock arche_lock(m_arche_mutex);
+  auto itArc = m_archetypes.find(type_id);
+  if (itArc == m_archetypes.end())
     return nullptr;
-// 代表物语义优化（ADR-0003）：由构建时宏 REP_SEMANTIC_OPTIMIZATION 控制
-// （CMake option TRPG_ENABLE_REP_SEMANTIC_OPTIMIZATION，默认 ON）
+  const EntityArcheType &arche = itArc->second;
+  // 代表物语义优化（ADR-0003）：由构建时宏 REP_SEMANTIC_OPTIMIZATION 控制
+  // （CMake option TRPG_ENABLE_REP_SEMANTIC_OPTIMIZATION，默认 ON）
 #ifdef REP_SEMANTIC_OPTIMIZATION
-  if (itArc->m_defaults.empty()) {
+  if (arche.m_defaults.empty()) {
     if (m_rep_type_2_uuid.contains(type_id)) {
       return m_pool[m_rep_type_2_uuid[type_id]].get();
     } else {
@@ -217,7 +221,7 @@ EntityInstance *EntityManager::createInstance(int32_t type_id) {
 
   auto inst = std::make_unique<EntityInstance>();
   inst->setTypeID(type_id);
-  for (const auto &[semantic, static_comp] : itArc->m_defaults) {
+  for (const auto &[semantic, static_comp] : arche.m_defaults) {
     if (auto *val = dynamic_cast<ValLabelComponent *>(static_comp.get())) {
       // ValLabel → Counter
       auto counter = std::make_unique<CounterComponent>();
@@ -246,6 +250,11 @@ bool EntityManager::destroyInstance(const uuid &id) {
   auto it = m_pool.find(id);
   if (it == m_pool.end())
     return false;
+  // #39: 被删实例若是代表物，同步清理代表物索引，避免 createInstance 命中悬空 uuid
+  const int32_t type_id = it->second->getTypeID();
+  auto rep_it = m_rep_type_2_uuid.find(type_id);
+  if (rep_it != m_rep_type_2_uuid.end() && rep_it->second == id)
+    m_rep_type_2_uuid.erase(rep_it);
   m_pool.erase(it);
   return true;
 }
