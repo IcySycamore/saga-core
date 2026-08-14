@@ -1,17 +1,16 @@
 #pragma once
 /**
- * @brief OpenGL 渲染后端（RenderDevice 的 GPU 实现）
+ * @brief OpenGL 渲染后端
  * @namespace lCYC::render
  * @note 职责:
- *   - 用 OpenGL（兼容模式固定管线）实现 RenderDevice 纯接口
- *   - 与 SoftwareDevice 共用同一接口 → 双后端画面一致（M5 验收）
+ *   - 用 OpenGL 实现 RenderDevice 纯接口
  *   - 深度测试由 GPU 内置（GL_DEPTH_TEST），近平面裁剪由 GPU 处理
  * @note 设计:
  *   - 固定管线（glBegin/glEnd/glLoadMatrixf）：MVP 列主序直传，顶点逐个发出
  *   - 现代管线升级点（VAO/VBO + shader）：顶点缓冲一次性上传 + uMVP/uColor，
  *     本实现为教学 MVP 保持最直观的"逐顶点发出"形式
  *   - 生命周期：GL 上下文由本类创建/销毁；窗口由外部拥有
- * @note 依赖: SDL3（窗口/GL 上下文）+ opengl32（Windows 提供 GL 1.1 核心函数）
+ * @note 依赖: SDL3 + opengl32
  * @note 像素格式：帧缓冲 GL_RGBA 内存序（R 最低字节），与软光栅一致
  */
 

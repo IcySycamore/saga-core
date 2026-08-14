@@ -19,12 +19,12 @@ namespace lCYC::math {
 // ============================ TRS 合成 ============================
 
 /**
- * @brief TRS 合成：M = T * R * S（先缩放再旋转再平移）
+ * @brief TRS 合成
  * @param pos 平移量
  * @param rot 旋转（四元数）
- * @param scale 缩放（默认全 1 = 无缩放）
+ * @param scale 缩放（默认全 1 无缩放）
  * @return 4x4 模型矩阵
- * @note 列向量约定：v' = M * v = T(R(S(v)))
+ * @note 列向量约定：v' = M * v = T(R(S(v))) 先缩放再旋转再平移
  */
 inline Matrix4x4 trs(const Vector3 &pos, const Quaternion &rot,
                      const Vector3 &scale = Vector3::one()) {
@@ -46,10 +46,9 @@ inline Matrix4x4 trs(const Vector3 &pos, const Quaternion &rot,
   return result;
 }
 
-
 /**
- * @brief 分解 TRS：从矩阵还原 pos/rot/scale
- * @param m 输入矩阵（须来自 trs 合成）
+ * @brief 分解 TRS：从TRS合成矩阵还原 pos/rot/scale
+ * @param m 输入矩阵
  * @param pos 输出平移
  * @param rot 输出旋转
  * @param scale 输出缩放
@@ -121,11 +120,10 @@ inline bool decomposeTRS(const Matrix4x4 &m, Vector3 &pos, Quaternion &rot,
 }
 
 // ============================ 矩阵互转 ============================
-// 3x3/4x4/四元数之间的转换，从 Matrix3x3 迁入（组合层职责）
 
 /**
  * @brief 法线矩阵（逆转置，用于非均匀缩放下的法线变换）
- * @param m 变换矩阵（仅取左上 3x3 的旋转/缩放部分）
+ * @param m 变换矩阵
  * @return 3x3 法线变换矩阵
  */
 inline Matrix3x3 normalMatrix(const Matrix3x3 &m) {
@@ -133,7 +131,7 @@ inline Matrix3x3 normalMatrix(const Matrix3x3 &m) {
 }
 
 /**
- * @brief 从 4x4 提取左上 3x3（去平移）
+ * @brief 从 4x4 提取左上 3x3
  * @param m4 输入 4x4 矩阵
  * @return 提取的 3x3 矩阵
  */
@@ -152,7 +150,7 @@ constexpr Matrix3x3 toMatrix3x3(const Matrix4x4 &m4) {
 }
 
 /**
- * @brief 3x3 扩展为 4x4（右下角 1，无平移）
+ * @brief 3x3 扩展为 4x4
  * @param m 输入 3x3 矩阵
  * @return 扩展后的 4x4 矩阵
  */
@@ -171,8 +169,8 @@ constexpr Matrix4x4 toMatrix4x4(const Matrix3x3 &m) {
 }
 
 /**
- * @brief 四元数 → 3x3 旋转矩阵
- * @param q 单位四元数（旋转）
+ * @brief 四元数 -> 3x3 旋转矩阵
+ * @param q 单位四元数
  * @return 3x3 旋转矩阵
  */
 inline Matrix3x3 rotation3x3(const Quaternion &q) {
@@ -182,11 +180,12 @@ inline Matrix3x3 rotation3x3(const Quaternion &q) {
 // ============================ 欧拉角互转 ============================
 
 /**
- * @brief 四元数 → 欧拉弧度角
- * @param q 四元数（会自动归一化）
+ * @brief 四元数 -> 欧拉弧度角
+ * @param q 四元数
  * @return 欧拉角 (x=pitch, y=yaw, z=roll)，弧度
- * @note 匹配 euler 的参数布局（euler(pitch, yaw, roll) = qz·qy·qx）
- *   yaw  = asin(2(wy − xz))   [y 分量编码 yaw]
+ * @details 在内部归一化q
+ *   匹配 euler 的参数布局（euler(pitch, yaw, roll) = qz·qy·qx）
+ *   yaw  = asin(2(wy − xz))                    [y 分量编码 yaw]
  *   pitch = atan2(2(wx + yz), 1 − 2(x² + y²))  [x 分量编码 pitch]
  *   roll  = atan2(2(wz + xy), 1 − 2(y² + z²))
  * @note 奇点：yaw = ±90° 时 pitch/roll 不可唯一分解，输出取一种约定
@@ -212,16 +211,16 @@ inline Vector3 quatToEuler(const Quaternion &q) {
 }
 
 /**
- * @brief 欧拉角 → 旋转矩阵（4x4，无平移）
+ * @brief 欧拉角 -> 旋转矩阵
  * @param eulerAngles 欧拉角 (x=pitch, y=yaw, z=roll)，弧度
- * @return 4x4 旋转矩阵（左上 3x3 为旋转）
+ * @return 4x4 旋转矩阵
  */
 inline Matrix4x4 eulerToMatrix(const Vector3 &eulerAngles) {
   return rotation(euler(eulerAngles.x, eulerAngles.y, eulerAngles.z));
 }
 
 /**
- * @brief 从 4x4 提取欧拉角（经四元数中转）
+ * @brief 从 4x4 提取欧拉角
  * @param m 输入 4x4 矩阵
  * @return 欧拉角 (x=pitch, y=yaw, z=roll)，弧度
  */
@@ -236,11 +235,11 @@ inline Vector3 matrixToEuler(const Matrix4x4 &m) {
 // ============================ 变换 ============================
 
 /**
- * @brief 变换方向（不带平移）：只用左上 3x3
+ * @brief 变换方向, 不平移
  * @param m 4x4 变换矩阵
  * @param dir 方向向量
  * @return 变换后的方向
- * @note 变换点用 Matrix4x4::operator*(Vector3)（齐次 w=1，带平移）
+ * @note 取左上3*3变换。包含平移地变换点方法参见 Matrix4x4::operator*(Vector3)
  */
 inline Vector3 transformDirection(const Matrix4x4 &m, const Vector3 &dir) {
   return Vector3(m.at(0, 0) * dir.x + m.at(0, 1) * dir.y + m.at(0, 2) * dir.z,

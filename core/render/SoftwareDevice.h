@@ -7,14 +7,10 @@
  *   - 深度缓冲：逐像素深度测试
  *   - 三角形光栅化：重心坐标 + 插值
  *   - 画线：Bresenham + 深度插值
- * @note 设计:
- *   - 纯引擎层
  *   - 帧缓冲可被外部读取（framebuffer()），由显示层/测试消费
- *   - init 忽略窗口句柄（纯 CPU 无窗口），endFrame 无 present（显示在外部）
  * @note 像素格式：uint32_t RGBA8888（0xRRGGBBAA）
  */
 
-#include "core/math/Math.h"
 #include "core/render/RenderDevice.h"
 
 #include <algorithm>
