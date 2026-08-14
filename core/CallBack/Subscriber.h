@@ -17,17 +17,18 @@ private:
   Connection<Sig> *m_connection = nullptr;
 
 public:
-  using RT = typename Func::result_type;
   Subscriber() = default;
+  Subscriber(Subscriber<Sig> &) = delete;
+  Subscriber(Subscriber<Sig> &&) = delete;
   explicit Subscriber(Func func_, Connection<Sig> *connection_)
       : m_func(std::move(func_)), m_connection(connection_) {
     connection_->bind_to(this);
   }
   ~Subscriber() {
-    if (m_connection)
+    if (m_connection && m_connection->getReceiver() == this)
       m_connection->bind_to(nullptr);
   }
-  template <typename... Args> RT operator()(Args &&...args) {
+  template <typename... Args> Func::result_type operator()(Args &&...args) {
     return m_func(std::forward<Args>(args)...);
   }
   bool valid() const { return static_cast<bool>(m_func); }
