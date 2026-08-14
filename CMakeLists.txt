@@ -69,6 +69,14 @@ target_include_directories(trpg_core PUBLIC
 )
 target_link_libraries(trpg_core PUBLIC Boost::json)
 
+# 代表物语义优化
+# 关闭方式：cmake -D REP_SEMANTIC_OPTIMIZATION=OFF
+option(REP_SEMANTIC_OPTIMIZATION
+       "Enable representative semantic optimization" ON)
+if(REP_SEMANTIC_OPTIMIZATION)
+    target_compile_definitions(trpg_core PRIVATE REP_SEMANTIC_OPTIMIZATION)
+endif()
+
 # ===== 测试目标 =====
 enable_testing()
 

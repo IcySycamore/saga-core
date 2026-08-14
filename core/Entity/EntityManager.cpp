@@ -3,6 +3,8 @@
 #include "Component/Static/ValVecComponent.h"
 #include "Component/StaticComponents.h"
 #include <boost/json.hpp>
+#include <boost/uuid/string_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -193,15 +195,25 @@ EntityHandler EntityManager::getHandler(int32_t type_id) {
 }
 EntityInstance *EntityManager::createInstance(int32_t type_id) {
   std::unique_lock lock(m_pool_mutex);
-#define REP_SEMANTIC_OPTIMIZATION
-#ifdef REP_SEMANTIC_OPTIMIZATION
-  if (m_rep_type_2_uuid.contains(type_id)) {
-    return m_pool[m_rep_type_2_uuid[type_id]].get();
-  }
-#endif
   auto itArc = this->getArche(type_id);
   if (itArc == nullptr)
     return nullptr;
+// 代表物语义优化（ADR-0003）：由构建时宏 REP_SEMANTIC_OPTIMIZATION 控制
+// （CMake option TRPG_ENABLE_REP_SEMANTIC_OPTIMIZATION，默认 ON）
+#ifdef REP_SEMANTIC_OPTIMIZATION
+  if (itArc->m_defaults.empty()) {
+    if (m_rep_type_2_uuid.contains(type_id)) {
+      return m_pool[m_rep_type_2_uuid[type_id]].get();
+    } else {
+      auto inst = std::make_unique<EntityInstance>();
+      EntityInstance *raw = inst.get();
+      inst->setTypeID(type_id);
+      m_rep_type_2_uuid[type_id] = raw->getUuid();
+      m_pool[raw->getUuid()] = std::move(inst);
+      return raw;
+    }
+  }
+#endif
 
   auto inst = std::make_unique<EntityInstance>();
   inst->setTypeID(type_id);
@@ -243,4 +255,163 @@ EntityInstance *EntityManager::getInstance(uuid entity_uuid) const {
   if (it == m_pool.end())
     return nullptr;
   return it->second.get();
+}
+
+bool EntityManager::saveInstances(const std::string &path) {
+  std::shared_lock lock(m_pool_mutex);
+  boost::json::object root;
+  boost::json::array instances;
+  boost::json::object representatives;
+
+  // 代表物注册表：type_id → uuid
+  for (const auto &[type_id, rep_uuid] : m_rep_type_2_uuid) {
+    representatives[std::to_string(type_id)] =
+        boost::json::string(boost::uuids::to_string(rep_uuid));
+  }
+
+  // 全量实例池
+  for (const auto &[id, inst] : m_pool) {
+    boost::json::object obj;
+    obj["uuid"] = boost::json::string(boost::uuids::to_string(id));
+    obj["type_id"] = inst->getTypeID();
+
+    // 代表物判定
+    const bool is_rep = m_rep_type_2_uuid.contains(inst->getTypeID()) &&
+                        m_rep_type_2_uuid.at(inst->getTypeID()) == id;
+    if (!is_rep) {
+      boost::json::object comps;
+      inst->forEachComponent([&](int32_t semantic,
+                                 const DynamicComponent *comp) {
+        if (auto *counter = dynamic_cast<const CounterComponent *>(comp)) {
+          comps[std::to_string(semantic)] = counter->getCounter();
+        } else if (auto *vec =
+                       dynamic_cast<const CounterVecComponent *>(comp)) {
+          boost::json::array arr;
+          for (size_t i = 0; i < vec->size(); ++i) {
+            arr.push_back(vec->getCounter(static_cast<int32_t>(i)));
+          }
+          comps[std::to_string(semantic)] = std::move(arr);
+        } else {
+          std::cerr << "[EntityManager] Unsupported dynamic component on save, "
+                       "semantic="
+                    << semantic << std::endl;
+        }
+      });
+      if (!comps.empty()) {
+        obj["components"] = std::move(comps);
+      }
+    }
+    instances.push_back(std::move(obj));
+  }
+
+  root["instances"] = std::move(instances);
+  root["representatives"] = std::move(representatives);
+
+  std::ofstream file(path);
+  if (!file.is_open()) {
+    std::cerr << "[EntityManager] Failed to open file for save: " << path
+              << std::endl;
+    return false;
+  }
+  file << boost::json::serialize(root);
+  return true;
+}
+
+bool EntityManager::loadInstances(const std::string &path) {
+  std::ifstream file(path);
+  if (!file.is_open()) {
+    std::cerr << "[EntityManager] Failed to open file: " << path << std::endl;
+    return false;
+  }
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  boost::system::error_code ec;
+  boost::json::value root = boost::json::parse(buffer.str(), ec);
+  if (ec) {
+    std::cerr << "[EntityManager] JSON parse error: " << ec.message()
+              << std::endl;
+    return false;
+  }
+  if (!root.is_object()) {
+    std::cerr << "[EntityManager] Root must be a JSON object." << std::endl;
+    return false;
+  }
+  const auto &root_obj = root.as_object();
+
+  std::unique_lock lock(m_pool_mutex);
+
+  // 先读代表物注册表
+  std::unordered_map<int32_t, uuid> rep_table;
+  if (root_obj.contains("representatives") &&
+      root_obj.at("representatives").is_object()) {
+    boost::uuids::string_generator gen;
+    for (const auto &[key, value] :
+         root_obj.at("representatives").as_object()) {
+      if (!value.is_string()) {
+        continue; // 损坏条目跳过
+      }
+      int32_t type_id = std::stoi(std::string(key));
+      rep_table[type_id] = gen(value.as_string().c_str());
+    }
+  }
+
+  if (!root_obj.contains("instances") || !root_obj.at("instances").is_array()) {
+    std::cerr << "[EntityManager] Missing 'instances' array." << std::endl;
+    return false;
+  }
+
+  boost::uuids::string_generator uuid_gen;
+  for (const auto &item : root_obj.at("instances").as_array()) {
+    if (!item.is_object()) {
+      continue; // 损坏条目跳过
+    }
+    const auto &obj = item.as_object();
+    if (!obj.contains("uuid") || !obj.at("uuid").is_string() ||
+        !obj.contains("type_id") || !obj.at("type_id").is_int64()) {
+      continue;
+    }
+    const uuid id = uuid_gen(obj.at("uuid").as_string().c_str());
+    if (id.is_nil()) {
+      continue;
+    }
+    const int32_t type_id = static_cast<int32_t>(obj.at("type_id").as_int64());
+
+    auto inst = std::make_unique<EntityInstance>();
+    inst->setUuid(id);
+    inst->setTypeID(type_id);
+
+    // 代表物判定
+    const bool is_rep =
+        rep_table.contains(type_id) && rep_table.at(type_id) == id;
+    if (is_rep) {
+      m_rep_type_2_uuid[type_id] = id;
+    } else if (obj.contains("components") && obj.at("components").is_object()) {
+      for (const auto &[key, value] : obj.at("components").as_object()) {
+        const int32_t semantic = std::stoi(std::string(key));
+        if (value.is_int64()) {
+          auto counter = std::make_unique<CounterComponent>();
+          counter->setCounter(static_cast<int32_t>(value.as_int64()));
+          inst->addComponent(semantic, std::move(counter));
+        } else if (value.is_array()) {
+          auto vec =
+              std::make_unique<CounterVecComponent>(value.as_array().size());
+          size_t i = 0;
+          for (const auto &elem : value.as_array()) {
+            if (elem.is_int64()) {
+              vec->setCounter(static_cast<int32_t>(i),
+                              static_cast<int32_t>(elem.as_int64()));
+            }
+            ++i;
+          }
+          inst->addComponent(semantic, std::move(vec));
+        } else {
+          std::cerr
+              << "[EntityManager] Unknown component type on load, semantic="
+              << semantic << ", skipped" << std::endl;
+        }
+      }
+    }
+    m_pool[id] = std::move(inst);
+  }
+  return true;
 }

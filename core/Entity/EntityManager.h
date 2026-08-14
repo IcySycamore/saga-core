@@ -33,10 +33,10 @@ public:
   // 获取EntityManager实例
   static EntityManager &getManager();
 
-  // 从文件读实例
-  bool loadInstance(const std::string &path);
-  // 写文件到实例
-  bool saveInstance(const std::string &path);
+  // 从文件读实例（ADR-0005：{instances, representatives}，尽力而为）
+  bool loadInstances(const std::string &path);
+  // 写实例到文件（ADR-0005：代表物不存 components）
+  bool saveInstances(const std::string &path);
 
   // 初始化静态信息表
   bool initArche(const std::string configPath);
