@@ -15,7 +15,6 @@
 #include <sstream>
 #include <string>
 
-
 // ===================== 轻量断言宏 =====================
 static int g_passed = 0;
 static int g_failed = 0;
@@ -63,6 +62,15 @@ static void test_load_valid_json() {
       EXPECT(val != nullptr, "defaults[30] should be ValLabelComponent");
       if (val)
         EXPECT_EQ(val->m_val_label, 3);
+    }
+    // #40: max[30] → ValLabel(10)
+    auto mit = arch->m_maximums.find(30);
+    EXPECT(mit != arch->m_maximums.end(), "max should contain key 30");
+    if (mit != arch->m_maximums.end()) {
+      auto *val = dynamic_cast<ValLabelComponent *>(mit->second.get());
+      EXPECT(val != nullptr, "max[30] should be ValLabelComponent");
+      if (val)
+        EXPECT_EQ(val->m_val_label, 10);
     }
   }
 
@@ -267,6 +275,60 @@ static void test_representative_shared() {
   }
 }
 
+// ===================== 测试 9: defaults > max 拒绝加载（#40）
+// =====================
+static void test_defaults_exceed_max_rejected() {
+  TEST("defaults_exceed_max_rejected");
+
+  auto &mgr = EntityManager::getManager();
+  bool ok = mgr.reload("test/test_items.json");
+  EXPECT(ok, "baseline reload should succeed");
+
+  // 写一个 defaults > max 的非法配置到临时文件
+  {
+    std::ofstream f("test/test_bad_max.json");
+    f << R"({
+  "archetypes": [
+    {
+      "type_id": 9999,
+      "name": "非法",
+      "components": {"121": 3},
+      "defaults": {"30": 100},
+      "max": {"30": 50}
+    }
+  ]
+})";
+  }
+
+  bool bad = mgr.reload("test/test_bad_max.json");
+  EXPECT(!bad, "reload with defaults>max should be rejected");
+}
+
+// ===================== 测试 10: reload 钳制存量实例（#40）
+// =====================
+static void test_reload_clamps_instances() {
+  TEST("reload_clamps_over_limit_instances");
+
+  auto &mgr = EntityManager::getManager();
+  mgr.reload("test/test_items.json");
+
+  // 创建实例并把计数器抬到超过 max（30 的上限 10）
+  auto inst = mgr.createInstance(4001);
+  EXPECT(inst != nullptr, "create 4001 should succeed");
+  if (!inst)
+    return;
+  auto *counter = inst->getComponent<CounterComponent>(30);
+  EXPECT(counter != nullptr, "4001 should have Counter at 30");
+  if (counter)
+    counter->setCounter(99); // 超过 max=10
+
+  // reload 后应被钳制到 10
+  bool ok = mgr.reload("test/test_items.json");
+  EXPECT(ok, "reload should succeed");
+  if (counter)
+    EXPECT_EQ(counter->getCounter(), 10);
+}
+
 // ===================== main =====================
 int main() {
   std::cout << "=== EntityManager Tests ===" << std::endl;
@@ -279,6 +341,8 @@ int main() {
   test_handler_register();
   test_persistence_roundtrip();
   test_representative_shared();
+  test_defaults_exceed_max_rejected();
+  test_reload_clamps_instances();
 
   std::cout << "\n=== Results: " << g_passed << " passed, " << g_failed
             << " failed ===" << std::endl;

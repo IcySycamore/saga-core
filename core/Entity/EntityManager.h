@@ -28,14 +28,16 @@ private:
   EntityManager(const EntityManager &) = delete;
 
   bool loadArche(const std::string &);
+  // 静态表热重载后，把存量超限的计数器钳制到新上限
+  void clampInstancesToMax();
 
 public:
   // 获取EntityManager实例
   static EntityManager &getManager();
 
-  // 从文件读实例（ADR-0005：{instances, representatives}，尽力而为）
+  // 从文件读实例
   bool loadInstances(const std::string &path);
-  // 写实例到文件（ADR-0005：代表物不存 components）
+  // 写实例到文件
   bool saveInstances(const std::string &path);
 
   // 初始化静态信息表

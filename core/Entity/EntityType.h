@@ -20,6 +20,7 @@ struct EntityArcheType {
 
   std::unordered_map<int32_t, std ::unique_ptr<StaticComponent>> m_component;
   std::unordered_map<int32_t, std ::unique_ptr<StaticComponent>> m_defaults;
+  std::unordered_map<int32_t, std ::unique_ptr<StaticComponent>> m_maximums;
 };
 
 class EntityInstance {

@@ -80,6 +80,14 @@ if(REP_SEMANTIC_OPTIMIZATION)
     target_compile_definitions(trpg_core PRIVATE REP_SEMANTIC_OPTIMIZATION)
 endif()
 
+# defaults ≤ max 校验（开发期调试设施，发布构建关闭）
+# 关闭方式：cmake -D VALIDATE_DEFAULTS_MAX=OFF
+option(VALIDATE_DEFAULTS_MAX
+       "Validate defaults <= max on archetype load" ON)
+if(VALIDATE_DEFAULTS_MAX)
+    target_compile_definitions(trpg_core PRIVATE VALIDATE_DEFAULTS_MAX)
+endif()
+
 # ===== 测试目标 =====
 enable_testing()
 
