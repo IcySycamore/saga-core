@@ -28,6 +28,8 @@ private:
   EntityManager(const EntityManager &) = delete;
 
   bool loadArche(const std::string &);
+  // #40: 静态表热重载后，把存量实例超限的计数器钳制到新上限
+  void clampInstancesToMax();
 
 public:
   // 获取EntityManager实例

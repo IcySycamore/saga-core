@@ -5,6 +5,7 @@
 #include <boost/json.hpp>
 #include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -141,6 +142,66 @@ bool EntityManager::loadArche(const std::string &path) {
       std::cout << " [EntityManager] " << nob << " error occuerd in #"
                 << type_id << " 's defaults parsing\n";
     }
+    // #40: 最大值表（defaults 的姊妹字段），引擎约束：默认值 ≤ 最大值
+    if (item_obj.contains("max") && item_obj.at("max").is_object()) {
+      const auto &max_arr = item_obj.at("max").as_object();
+      for (const auto &[key, value] : max_arr) {
+        int32_t semantic = std::stoi(std::string(key));
+        if (value.is_int64()) {
+          // → ValLabelComponent（单值上限）
+          auto comp = std::make_unique<ValLabelComponent>();
+          comp->m_val_label = static_cast<int32_t>(value.as_int64());
+          arch.m_maximums[semantic] = std::move(comp);
+        } else if (value.is_array()) {
+          // → ValVecComponent（逐索引上限）
+          auto comp = std::make_unique<ValVecComponent>();
+          for (auto &c : value.as_array()) {
+            if (c.is_int64())
+              comp->push_back(static_cast<int32_t>(c.as_int64()));
+          }
+          arch.m_maximums[semantic] = std::move(comp);
+        } else {
+          std::cout << "[EntityManager] Unknown max type for key " << semantic
+                    << std::endl;
+          ++nob;
+          ++total_nob;
+        }
+      }
+    }
+    // 引擎层约束（#40）：defaults ≤ max，违反则拒绝加载该 archetype
+    for (const auto &[semantic, default_comp] : arch.m_defaults) {
+      auto max_it = arch.m_maximums.find(semantic);
+      if (max_it == arch.m_maximums.end())
+        continue; // 未配置 max 的语义键不校验（向后兼容）
+      if (auto *val =
+              dynamic_cast<ValLabelComponent *>(default_comp.get())) {
+        if (auto *max_val =
+                dynamic_cast<ValLabelComponent *>(max_it->second.get())) {
+          if (val->m_val_label > max_val->m_val_label) {
+            std::cerr << "[EntityManager] defaults > max for semantic "
+                      << semantic << " in type " << type_id << ": "
+                      << val->m_val_label << " > " << max_val->m_val_label
+                      << std::endl;
+            return false;
+          }
+        }
+      } else if (auto *vec =
+                     dynamic_cast<ValVecComponent *>(default_comp.get())) {
+        if (auto *max_vec =
+                dynamic_cast<ValVecComponent *>(max_it->second.get())) {
+          const size_t n = std::min(vec->size(), max_vec->size());
+          for (size_t i = 0; i < n; ++i) {
+            if (vec->getVal(static_cast<int32_t>(i)) >
+                max_vec->getVal(static_cast<int32_t>(i))) {
+              std::cerr
+                  << "[EntityManager] defaults > max for semantic " << semantic
+                  << " in type " << type_id << " index " << i << std::endl;
+              return false;
+            }
+          }
+        }
+      }
+    }
     m_archetypes[type_id] = std::move(arch);
 
     std::cout << "[EntityManager] Loaded TypeId: " << type_id
@@ -161,9 +222,49 @@ bool EntityManager::initArche(const std::string configPath) {
 }
 
 bool EntityManager::reload(const std::string configPath) {
-  std::unique_lock lock(m_arche_mutex);
-  m_archetypes.clear();
-  return loadArche(configPath);
+  {
+    std::unique_lock lock(m_arche_mutex);
+    m_archetypes.clear();
+    if (!loadArche(configPath))
+      return false;
+  } // 释放 arche 锁，避免与 createInstance 的 pool→arche 锁序成环
+  clampInstancesToMax(); // #40: 存量超限实例钳制到新上限
+  return true;
+}
+
+// #40: 静态表热重载后，把存量实例超限的计数器钳制到新上限
+// 锁序 pool→arche 单向，与 createInstance 一致，无死锁环
+void EntityManager::clampInstancesToMax() {
+  std::unique_lock pool_lock(m_pool_mutex);
+  std::shared_lock arche_lock(m_arche_mutex);
+  for (auto &[id, inst] : m_pool) {
+    const int32_t type_id = inst->getTypeID();
+    auto arch_it = m_archetypes.find(type_id);
+    if (arch_it == m_archetypes.end())
+      continue;
+    const auto &maximums = arch_it->second.m_maximums;
+    for (const auto &[semantic, max_comp] : maximums) {
+      if (auto *max_val =
+              dynamic_cast<ValLabelComponent *>(max_comp.get())) {
+        if (auto *counter = inst->getComponent<CounterComponent>(semantic)) {
+          if (counter->getCounter() > max_val->m_val_label)
+            counter->setCounter(max_val->m_val_label);
+        }
+      } else if (auto *max_vec =
+                     dynamic_cast<ValVecComponent *>(max_comp.get())) {
+        if (auto *vec = inst->getComponent<CounterVecComponent>(semantic)) {
+          const size_t n = std::min(vec->size(), max_vec->size());
+          for (size_t i = 0; i < n; ++i) {
+            if (vec->getCounter(static_cast<int32_t>(i)) >
+                max_vec->getVal(static_cast<int32_t>(i))) {
+              vec->setCounter(static_cast<int32_t>(i),
+                              max_vec->getVal(static_cast<int32_t>(i)));
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 const EntityArcheType *EntityManager::getArche(int32_t type_id) const {
@@ -250,7 +351,8 @@ bool EntityManager::destroyInstance(const uuid &id) {
   auto it = m_pool.find(id);
   if (it == m_pool.end())
     return false;
-  // #39: 被删实例若是代表物，同步清理代表物索引，避免 createInstance 命中悬空 uuid
+  // #39: 被删实例若是代表物，同步清理代表物索引，避免 createInstance 命中悬空
+  // uuid
   const int32_t type_id = it->second->getTypeID();
   auto rep_it = m_rep_type_2_uuid.find(type_id);
   if (rep_it != m_rep_type_2_uuid.end() && rep_it->second == id)
