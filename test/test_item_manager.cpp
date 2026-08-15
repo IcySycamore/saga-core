@@ -15,7 +15,6 @@
 #include <sstream>
 #include <string>
 
-
 // ===================== 轻量断言宏 =====================
 static int g_passed = 0;
 static int g_failed = 0;
@@ -276,7 +275,8 @@ static void test_representative_shared() {
   }
 }
 
-// ===================== 测试 9: defaults > max 拒绝加载（#40） =====================
+// ===================== 测试 9: defaults > max 拒绝加载（#40）
+// =====================
 static void test_defaults_exceed_max_rejected() {
   TEST("defaults_exceed_max_rejected");
 
@@ -304,7 +304,8 @@ static void test_defaults_exceed_max_rejected() {
   EXPECT(!bad, "reload with defaults>max should be rejected");
 }
 
-// ===================== 测试 10: reload 钳制存量实例（#40） =====================
+// ===================== 测试 10: reload 钳制存量实例（#40）
+// =====================
 static void test_reload_clamps_instances() {
   TEST("reload_clamps_over_limit_instances");
 

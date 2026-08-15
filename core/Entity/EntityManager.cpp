@@ -11,7 +11,6 @@
 #include <memory>
 #include <sstream>
 
-
 bool EntityManager::loadArche(const std::string &path) {
 
   std::ifstream file(path);
@@ -170,20 +169,20 @@ bool EntityManager::loadArche(const std::string &path) {
       }
     }
     // 约束 defaults ≤ max，违反则拒绝加载该 archetype
-    // 开发期调试设施：由 VALIDATE_DEFAULTS_MAX 宏控制（发布构建关闭）
 #ifdef VALIDATE_DEFAULTS_MAX
     for (const auto &[semantic, default_comp] : arch.m_defaults) {
       auto max_it = arch.m_maximums.find(semantic);
       if (max_it == arch.m_maximums.end())
         continue; // 未配置 对应的 max 的语义键
-      if (auto *default_val = dynamic_cast<ValLabelComponent *>(default_comp.get())) {
+      if (auto *default_val =
+              dynamic_cast<ValLabelComponent *>(default_comp.get())) {
         if (auto *max_val =
                 dynamic_cast<ValLabelComponent *>(max_it->second.get())) {
           if (default_val->m_val_label > max_val->m_val_label) {
             std::cerr << "[EntityManager] defaults > max for semantic "
                       << semantic << " in type " << type_id << ": "
-                      << default_val->m_val_label << " > " << max_val->m_val_label
-                      << std::endl;
+                      << default_val->m_val_label << " > "
+                      << max_val->m_val_label << std::endl;
             return false;
           }
         }
@@ -231,12 +230,11 @@ bool EntityManager::reload(const std::string configPath) {
     if (!loadArche(configPath))
       return false;
   } // 释放 arche 锁，避免与 createInstance 的 pool→arche 锁序成环
-  clampInstancesToMax(); // #40: 存量超限实例钳制到新上限
+  clampInstancesToMax();
   return true;
 }
 
-// #40: 静态表热重载后，把存量实例超限的计数器钳制到新上限
-// 锁序 pool→arche 单向，与 createInstance 一致，无死锁环
+// 锁序 pool→arche 单向
 void EntityManager::clampInstancesToMax() {
   std::unique_lock pool_lock(m_pool_mutex);
   std::shared_lock arche_lock(m_arche_mutex);
@@ -298,15 +296,13 @@ EntityHandler EntityManager::getHandler(int32_t type_id) {
 }
 EntityInstance *EntityManager::createInstance(int32_t type_id) {
   std::unique_lock lock(m_pool_mutex);
-  // #38: 不再调用 getArche()（其内部锁在返回前释放，锁外遍历悬垂）。
-  // 改为自持 arche 读锁并在锁作用域内完成 defaults 遍历，锁序 pool→arche 单向。
   std::shared_lock arche_lock(m_arche_mutex);
   auto itArc = m_archetypes.find(type_id);
   if (itArc == m_archetypes.end())
     return nullptr;
   const EntityArcheType &arche = itArc->second;
-  // 代表物语义优化（ADR-0003）：由构建时宏 REP_SEMANTIC_OPTIMIZATION 控制
-  // （CMake option TRPG_ENABLE_REP_SEMANTIC_OPTIMIZATION，默认 ON）
+  // 代表物语义优化
+  // CMake option REP_SEMANTIC_OPTIMIZATION，默认 ON
 #ifdef REP_SEMANTIC_OPTIMIZATION
   if (arche.m_defaults.empty()) {
     if (m_rep_type_2_uuid.contains(type_id)) {
