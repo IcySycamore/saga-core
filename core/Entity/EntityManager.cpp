@@ -2,20 +2,21 @@
 #include "Component/DynamicComponents.h"
 #include "Component/Static/ValVecComponent.h"
 #include "Component/StaticComponents.h"
+#include <algorithm>
 #include <boost/json.hpp>
 #include <boost/uuid/string_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <sstream>
 
+
 bool EntityManager::loadArche(const std::string &path) {
 
   std::ifstream file(path);
   if (!file.is_open()) {
-    std::cerr << "E[EntityManager] Failed to open file: " << path << std::endl;
+    std::cerr << "[EntityManager] Failed to open file: " << path << std::endl;
     return false;
   }
 
@@ -142,18 +143,18 @@ bool EntityManager::loadArche(const std::string &path) {
       std::cout << " [EntityManager] " << nob << " error occuerd in #"
                 << type_id << " 's defaults parsing\n";
     }
-    // #40: 最大值表（defaults 的姊妹字段），引擎约束：默认值 ≤ 最大值
+    // 最大值
     if (item_obj.contains("max") && item_obj.at("max").is_object()) {
       const auto &max_arr = item_obj.at("max").as_object();
       for (const auto &[key, value] : max_arr) {
         int32_t semantic = std::stoi(std::string(key));
         if (value.is_int64()) {
-          // → ValLabelComponent（单值上限）
+          // → ValLabelComponent
           auto comp = std::make_unique<ValLabelComponent>();
           comp->m_val_label = static_cast<int32_t>(value.as_int64());
           arch.m_maximums[semantic] = std::move(comp);
         } else if (value.is_array()) {
-          // → ValVecComponent（逐索引上限）
+          // → ValVecComponent
           auto comp = std::make_unique<ValVecComponent>();
           for (auto &c : value.as_array()) {
             if (c.is_int64())
@@ -168,40 +169,42 @@ bool EntityManager::loadArche(const std::string &path) {
         }
       }
     }
-    // 引擎层约束（#40）：defaults ≤ max，违反则拒绝加载该 archetype
+    // 约束 defaults ≤ max，违反则拒绝加载该 archetype
+    // 开发期调试设施：由 VALIDATE_DEFAULTS_MAX 宏控制（发布构建关闭）
+#ifdef VALIDATE_DEFAULTS_MAX
     for (const auto &[semantic, default_comp] : arch.m_defaults) {
       auto max_it = arch.m_maximums.find(semantic);
       if (max_it == arch.m_maximums.end())
-        continue; // 未配置 max 的语义键不校验（向后兼容）
-      if (auto *val =
-              dynamic_cast<ValLabelComponent *>(default_comp.get())) {
+        continue; // 未配置 对应的 max 的语义键
+      if (auto *default_val = dynamic_cast<ValLabelComponent *>(default_comp.get())) {
         if (auto *max_val =
                 dynamic_cast<ValLabelComponent *>(max_it->second.get())) {
-          if (val->m_val_label > max_val->m_val_label) {
+          if (default_val->m_val_label > max_val->m_val_label) {
             std::cerr << "[EntityManager] defaults > max for semantic "
                       << semantic << " in type " << type_id << ": "
-                      << val->m_val_label << " > " << max_val->m_val_label
+                      << default_val->m_val_label << " > " << max_val->m_val_label
                       << std::endl;
             return false;
           }
         }
-      } else if (auto *vec =
+      } else if (auto *default_vec =
                      dynamic_cast<ValVecComponent *>(default_comp.get())) {
         if (auto *max_vec =
                 dynamic_cast<ValVecComponent *>(max_it->second.get())) {
-          const size_t n = std::min(vec->size(), max_vec->size());
+          const size_t n = std::min(default_vec->size(), max_vec->size());
           for (size_t i = 0; i < n; ++i) {
-            if (vec->getVal(static_cast<int32_t>(i)) >
+            if (default_vec->getVal(static_cast<int32_t>(i)) >
                 max_vec->getVal(static_cast<int32_t>(i))) {
-              std::cerr
-                  << "[EntityManager] defaults > max for semantic " << semantic
-                  << " in type " << type_id << " index " << i << std::endl;
+              std::cerr << "[EntityManager] defaults > max for semantic "
+                        << semantic << " in type " << type_id << " index " << i
+                        << std::endl;
               return false;
             }
           }
         }
       }
     }
+#endif
     m_archetypes[type_id] = std::move(arch);
 
     std::cout << "[EntityManager] Loaded TypeId: " << type_id
@@ -244,8 +247,7 @@ void EntityManager::clampInstancesToMax() {
       continue;
     const auto &maximums = arch_it->second.m_maximums;
     for (const auto &[semantic, max_comp] : maximums) {
-      if (auto *max_val =
-              dynamic_cast<ValLabelComponent *>(max_comp.get())) {
+      if (auto *max_val = dynamic_cast<ValLabelComponent *>(max_comp.get())) {
         if (auto *counter = inst->getComponent<CounterComponent>(semantic)) {
           if (counter->getCounter() > max_val->m_val_label)
             counter->setCounter(max_val->m_val_label);
